@@ -1,0 +1,21 @@
+
+#  DBO_unit 
+  # - raw_units
+
+kilovolt_amperes_reactive:
+  - kilo-volt-amperes-reactive
+kilowatts:
+  - kilowatts
+volts:
+  - volts
+amperes:
+  - amperes
+hertz:
+  - hertz
+kilowatt_hours:
+  - kilowatt-hours
+kilovolt_amperes:
+  - kilo-volt-amperes
+no_units:
+  - no-units
+

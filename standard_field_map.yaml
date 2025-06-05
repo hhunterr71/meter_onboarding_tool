@@ -1,0 +1,94 @@
+# METER TYPE
+  # standard_field_name
+    # - objectName (from export)
+
+
+EM:
+  apparent_power_sensor:
+    - kVA
+  average_inter_line_voltage_sensor:
+    - Volts_LL
+  average_line_current_sensor:
+    - Current
+  average_line_neutral_voltage_sensor:
+    - Volts_LN
+  energy_accumulator:
+    - kWh
+  line_frequency_sensor:
+    - Frequency
+    - Freq
+  phase1_line_current_sensor:
+    - Current_A
+    - Phase_Line_Current_I1
+  phase2_line_current_sensor:
+    - Current_B
+    - Phase_Line_Current_I2
+  phase3_line_current_sensor:
+    - Current_C
+    - Phase_Line_Current_I3
+  phase1_neutral_line_voltage_sensor:
+    - Volts_AN
+    - Volts_A
+  phase2_neutral_line_voltage_sensor:
+    - Volts_BN
+    - Volts_B
+  phase3_neutral_line_voltage_sensor:
+    - Volts_CN
+    - Volts_C
+  phase1_phase2_line_voltage_sensor:
+    - Volts_AB
+    - Line_voltage_V12
+  phase1_phase3_line_voltage_sensor:
+    - Volts_AC
+    - Line_voltage_V31
+    - Volts_CA
+  phase2_phase3_line_voltage_sensor:
+    - Volts_BC
+    - Line_voltage_V23
+  phase1_power_sensor:
+    - kW_A
+  phase2_power_sensor:
+    - kW_B
+  phase3_power_sensor:
+    - kW_C
+  power_sensor:
+    - kW
+  phase1_powerfactor_sensor:
+    - PF_A
+  phase2_powerfactor_sensor:
+    - PF_B
+  phase3_powerfactor_sensor:
+    - PF_C
+  powerfactor_sensor:
+    - PF
+  reactive_power_sensor:
+    - kVAR
+  IGNORE:
+    - Data_Stale
+    - kWh_rec
+    - Cumulative_kVARh_Discharged
+    - Run_Time
+    - Minute_Time
+    - Second_Time
+    - Cumulative_kWh_Charged
+    - Cumulative_kWh_Discharged
+    - Cumulative_kVARh_Charged
+
+WM:
+  flow_sensor:
+    - Flow
+    - WaterFlow
+  pressure_sensor:
+    - Pressure
+    - WaterPressure
+  volume_accumulator:
+    - TotalVolume
+    - Volume
+
+GM:
+  gas_flow_sensor:
+    - GasFlow
+  gas_pressure_sensor:
+    - GasPressure
+  gas_volume_accumulator:
+    - GasVolume
