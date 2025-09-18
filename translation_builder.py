@@ -1,10 +1,11 @@
+from typing import Dict, Any
 import pandas as pd
 import yaml
 import os
 
-def translation_builder(df):
+def translation_builder(df: pd.DataFrame) -> str:
     # Build structured YAML output grouped by device
-    yaml_output = {}
+    yaml_output: Dict[str, Any] = {}
 
     for _, row in df.iterrows():
         device = row['assetName']
@@ -41,10 +42,22 @@ def translation_builder(df):
     save_prompt = input("\nWould you like to save the YAML output to a file? (y/n): ").strip().lower()
     if save_prompt == "y":
         save_path = input("Enter the full file path (e.g., C:\\Users\\You\\Desktop\\output.yaml): ").strip()
+        
+        if not save_path:
+            print("❌ No file path provided. Skipping save.")
+            return yaml_string
+            
         try:
-            with open(save_path, "w") as file:
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            
+            with open(save_path, "w", encoding='utf-8') as file:
                 file.write(yaml_string)
             print(f"✅ YAML file saved to: {save_path}")
+        except PermissionError:
+            print(f"❌ Permission denied: Cannot write to {save_path}")
+        except OSError as e:
+            print(f"❌ Invalid file path: {e}")
         except Exception as e:
             print(f"❌ Failed to save file: {e}")
     else:

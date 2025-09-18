@@ -1,0 +1,29 @@
+# Configuration file for Meter Onboard Tool
+
+# Default settings
+defaults:
+  general_type: "METER"
+  field_map_file: "standard_field_map.yaml"
+  unit_map_file: "raw_units.yaml"
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+# Output settings
+output:
+  auto_copy_to_clipboard: true
+  default_save_directory: "./output"
+  
+# Validation settings
+validation:
+  required_json_fields:
+    - "type"
+    - "data"
+    - "device"
+  
+# UI settings
+ui:
+  prompt_retry_on_error: true
+  show_detailed_errors: true

@@ -7,21 +7,36 @@ This tool converts raw discovery JSON output from meters into structured YAML tr
 ## Project Files
 
 - **main_script.py**: Main command-line interface script for user interaction.
-- **meter_translation_builder.py**: Contains YAML conversion logic from processed DataFrame.
+- **translation_builder.py**: Contains YAML conversion logic from processed DataFrame.
+- **meter_onboard.py**: Entry point script that provides a loop interface.
 - **standard_field_map.yaml**: YAML file mapping object names to standard field names by meter type.
 - **raw_units.yaml**: YAML file mapping raw units to canonical DBO units.
+- **config.yaml**: Configuration file for default settings and customization.
 
 ---
 
 ## Usage
 
-1. Run the main script:
-
+1. If using the quick start method, simply run:
    ```bash
-   python main_script.py
+   python run.py
    ```
 
-2. Follow prompts to:
+2. For manual setup, activate the virtual environment first:
+   
+   **Windows:**
+   ```cmd
+   venv\Scripts\activate
+   python meter_onboard.py
+   ```
+   
+   **Linux/macOS:**
+   ```bash
+   source venv/bin/activate
+   python meter_onboard.py
+   ```
+
+3. Follow prompts to:
 
    - Enter meter type (e.g., EM, WM, GM).
    - Paste discovery JSON string.
@@ -31,17 +46,49 @@ This tool converts raw discovery JSON output from meters into structured YAML tr
    - Generate YAML translation output.
    - Optionally save the YAML file to a chosen path.
 
-3. Outputs are automatically copied to your clipboard for easy pasting.
+4. Outputs are automatically copied to your clipboard for easy pasting.
 
 ---
 
-## Dependencies
+## Setup
 
-Install required Python packages with:
+### Quick Start (Recommended)
 
-```bash
-pip install pandas pyperclip pyyaml
-```
+1. Run the setup script to create a virtual environment and install dependencies:
+   ```bash
+   python setup.py
+   ```
+
+2. Run the tool:
+   ```bash
+   python run.py
+   ```
+
+### Manual Setup
+
+#### Windows
+1. Create and activate a virtual environment:
+   ```cmd
+   python -m venv venv
+   venv\Scripts\activate
+   ```
+
+2. Install dependencies:
+   ```cmd
+   pip install -r requirements.txt
+   ```
+
+#### Linux/macOS
+1. Create and activate a virtual environment:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ---
 
@@ -65,12 +112,38 @@ PV_Meter:
 
 ---
 
+## Testing
+
+Run the test suite to verify functionality:
+
+```bash
+# Activate virtual environment first
+python -m pytest test_meter_onboard.py -v
+
+# Run with coverage
+python -m pytest test_meter_onboard.py --cov=main_script --cov=translation_builder -v
+```
+
+---
+
+## Configuration
+
+The tool uses `config.yaml` for configuration. You can modify:
+
+- Default general type (defaults to "METER")
+- File paths for field and unit mappings
+- Logging settings
+- Validation requirements
+
+---
+
 ## Notes
 
 - Update `standard_field_map.yaml` and `raw_units.yaml` as needed to keep mappings current.
 - Missing fields can be manually added during runtime prompts.
 - The tool validates inputs to ensure completeness.
 - Outputs are saved only if you choose to do so and you provide a valid path.
+- Check logs for detailed information about processing steps.
 
 ---
 

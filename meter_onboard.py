@@ -1,6 +1,6 @@
 import main_script
 
-def run_loop():
+def run_loop() -> None:
     while True:
         main_script.main()
         again = input("Run again? (y/n): ").strip().lower()
