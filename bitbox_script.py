@@ -2,7 +2,6 @@ import json
 import logging
 from typing import Dict, Any, Tuple, Optional
 import pandas as pd
-import pyperclip
 import yaml
 import os
 from translation_builder import translation_builder
@@ -129,8 +128,6 @@ def print_and_copy_table(df: pd.DataFrame) -> None:
     output_table = df[["assetName", "object_name", "standardFieldName", "raw_units", "DBO_standard_units"]]
     print("\n🔍 Mapping Review Table:")
     print(output_table.to_string(index=False))
-    output_table.to_clipboard(index=False)
-    print("\nTable copied to clipboard.")
 
 def confirm_mapping() -> None:
     user_input = input("Are all relevant fields matched? (y/n): ").strip().lower()
@@ -145,7 +142,6 @@ def get_standard_fields(df: pd.DataFrame) -> str:
         "standardFieldName"
     ].tolist()
     standard_fields_str = ", ".join(filtered)
-    pd.Series([standard_fields_str]).to_clipboard(index=False, header=False)
     print("Standard Field Names:")
     print(standard_fields_str)
     print()
@@ -197,8 +193,6 @@ def add_missing_fields(df: pd.DataFrame, asset_name: str, generalType: str, type
     df = df[df["standardFieldName"] != "IGNORE"]
     df = df.sort_values(by="standardFieldName", ascending=False).reset_index(drop=True)
     print(df)
-    df.to_clipboard(index=False)
-    print("🔍 Data copied to clipboard:\n")
     return df
 
 def confirm_generate_translation() -> bool:
@@ -320,8 +314,6 @@ def main() -> None:
         yaml_string = translation_builder(df)
         print("\n📄 YAML Output:\n")
         print(yaml_string)
-        pyperclip.copy(yaml_string)
-        print("\n📋 YAML copied to clipboard.")
 
 if __name__ == "__main__":
     main()

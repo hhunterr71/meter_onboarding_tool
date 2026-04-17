@@ -3,7 +3,6 @@ import os
 from typing import Dict, Any, Tuple, List
 
 import pandas as pd
-import pyperclip
 
 import bitbox_script as main_script
 from translation_builder_mango import translation_builder_mango
@@ -191,8 +190,6 @@ def run_site_model_editor() -> None:
     matched_fields = [k for k in updated_points if k not in unmatched_set]
     fields_str = ", ".join(matched_fields)
     print(f"\nMatched Standard Fields:\n{fields_str}")
-    pyperclip.copy(fields_str)
-    print("(Copied to clipboard)")
 
     confirm = input("\nContinue with these mappings? (y/n): ").strip().lower()
     if confirm != "y":
@@ -221,5 +218,3 @@ def run_site_model_editor() -> None:
 
     df = build_translation_dataframe(updated_points, unit_map, asset_name, general_type, type_name)
     yaml_string = translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir)
-    pyperclip.copy(yaml_string)
-    print("YAML copied to clipboard.")

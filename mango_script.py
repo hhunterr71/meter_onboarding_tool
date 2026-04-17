@@ -2,7 +2,6 @@ import json
 import logging
 from typing import Dict, Any, Tuple
 import pandas as pd
-import pyperclip
 
 import bitbox_script as main_script
 from translation_builder_mango import translation_builder_mango
@@ -90,5 +89,3 @@ def run_mango() -> None:
         yaml_string = translation_builder_mango(df, auto_filename=auto_filename)
         print("\nYAML Output:\n")
         print(yaml_string)
-        pyperclip.copy(yaml_string)
-        print("\nYAML copied to clipboard.")
