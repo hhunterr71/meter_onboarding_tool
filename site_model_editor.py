@@ -77,26 +77,16 @@ def print_review(mapped_summary: List[str], unmatched: List[str]) -> None:
         print("\nAll points matched successfully.")
 
 
-def add_missing_points(
-    updated_points: Dict[str, Any],
-    asset_name: str,
-) -> Dict[str, Any]:
+def add_missing_points(asset_name: str) -> List[str]:
     user_input = input("\nAre there any missing fields you would like to add? (y/n): ").strip().lower()
     if user_input != "y":
-        return updated_points
+        return []
 
     new_fields_input = input("Enter the missing standardFieldName(s), separated by commas: ").strip()
     missing_fields = [f.strip() for f in new_fields_input.split(",") if f.strip()]
-
     for field in missing_fields:
-        updated_points[field] = {
-            "units": "MISSING",
-            "writable": False,
-            "ref": "MISSING",
-        }
         print(f"  Added: {field}")
-
-    return updated_points
+    return missing_fields
 
 
 def build_translation_dataframe(
@@ -196,9 +186,9 @@ def run_site_model_editor() -> None:
         print("Cancelled.")
         return
 
-    # 6. Add missing fields
+    # 6. Add missing fields (returns list only, does NOT modify updated_points)
     asset_name = parsed.get("system", {}).get("name", "UNKNOWN")
-    updated_points = add_missing_points(updated_points, asset_name)
+    missing_fields = add_missing_points(asset_name)
 
     # 7. Type info
     general_type = main_script.get_general_type()
@@ -217,4 +207,17 @@ def run_site_model_editor() -> None:
     save_updated_json(parsed, updated_points, auto_filename, save_dir)
 
     df = build_translation_dataframe(updated_points, unit_map, asset_name, general_type, type_name)
+
+    if missing_fields:
+        missing_rows = pd.DataFrame([{
+            "assetName": asset_name,
+            "object_name": "MISSING",
+            "standardFieldName": field,
+            "raw_units": "MISSING",
+            "DBO_standard_units": "MISSING",
+            "generalType": general_type,
+            "typeName": type_name,
+        } for field in missing_fields])
+        df = pd.concat([df, missing_rows], ignore_index=True)
+
     yaml_string = translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir)

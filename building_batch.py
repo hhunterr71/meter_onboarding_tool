@@ -1,0 +1,167 @@
+import json
+import os
+from typing import Dict, Any, List
+
+import pandas as pd
+
+import bitbox_script as main_script
+from site_model_editor import (
+    load_site_model,
+    validate_site_model,
+    build_case_insensitive_field_map,
+    process_points,
+    print_review,
+    build_translation_dataframe,
+    add_missing_points,
+)
+from translation_builder_mango import translation_builder_mango
+
+
+def find_device_folders(devices_dir: str) -> List[str]:
+    if not os.path.isdir(devices_dir):
+        raise FileNotFoundError(f"Devices directory not found: {devices_dir}")
+    return sorted([
+        name for name in os.listdir(devices_dir)
+        if os.path.isdir(os.path.join(devices_dir, name))
+    ])
+
+
+def select_devices(folders: List[str]) -> List[str]:
+    print("\nAvailable devices:")
+    for i, folder in enumerate(folders, 1):
+        print(f"  {i}. {folder}")
+    while True:
+        raw = input("\nEnter numbers to process (e.g. 1,3) or 'all': ").strip().lower()
+        if raw == "all":
+            return list(folders)
+        try:
+            indices = [int(x.strip()) for x in raw.split(",") if x.strip()]
+            if indices and all(1 <= i <= len(folders) for i in indices):
+                return [folders[i - 1] for i in indices]
+        except ValueError:
+            pass
+        print(f"Invalid input. Enter numbers between 1 and {len(folders)}, or 'all'.")
+
+
+def overwrite_json(file_path: str, parsed: Dict[str, Any], updated_points: Dict[str, Any]) -> None:
+    parsed["pointset"]["points"] = updated_points
+    json_string = json.dumps(parsed, indent=2)
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(json_string)
+        print(f"Overwritten: {file_path}")
+    except PermissionError:
+        print(f"Permission denied: Cannot write to {file_path}")
+    except Exception as e:
+        print(f"Failed to overwrite file: {e}")
+
+
+def run_building_batch() -> None:
+    # 1. Get building directory
+    while True:
+        building_dir = input("Enter building directory path: ").strip().strip('"').strip("'")
+        devices_dir = os.path.join(building_dir, "udmi", "devices")
+        if os.path.isdir(devices_dir):
+            break
+        print(f"Directory not found: '{devices_dir}'")
+        print("Expected structure: <building_dir>/udmi/devices/")
+
+    # 2. List and select devices
+    try:
+        folders = find_device_folders(devices_dir)
+    except FileNotFoundError as e:
+        print(e)
+        return
+
+    if not folders:
+        print("No device folders found.")
+        return
+
+    selected = select_devices(folders)
+    unit_map = main_script.load_unit_mapping()
+    processed = []
+
+    # Phase 1: JSON rename (overwrite in place, no missing fields prompt)
+    for folder in selected:
+        file_path = os.path.join(devices_dir, folder, "metadata.json")
+        print(f"\n--- Processing: {folder} ---")
+
+        if not os.path.isfile(file_path):
+            print(f"metadata.json not found in {folder}, skipping.")
+            continue
+
+        try:
+            parsed = load_site_model(file_path)
+        except Exception as e:
+            print(f"Error reading {file_path}: {e}, skipping.")
+            continue
+
+        if not validate_site_model(parsed):
+            print(f"Skipping {folder}.")
+            continue
+
+        meter_type = input("Enter meter type (EM, WM, GM): ").strip().upper()
+        try:
+            ci_field_map = build_case_insensitive_field_map(meter_type)
+        except ValueError as e:
+            print(e)
+            print(f"Skipping {folder}.")
+            continue
+
+        points = parsed["pointset"]["points"]
+        updated_points, mapped_summary, unmatched = process_points(points, ci_field_map, unit_map)
+        print_review(mapped_summary, unmatched)
+
+        confirm = input("\nContinue with these mappings? (y/n): ").strip().lower()
+        if confirm != "y":
+            print("Skipping.")
+            continue
+
+        overwrite_json(file_path, parsed, updated_points)
+
+        asset_name = parsed.get("system", {}).get("name", "UNKNOWN")
+        processed.append({
+            "folder": folder,
+            "parsed": parsed,
+            "updated_points": updated_points,
+            "asset_name": asset_name,
+        })
+
+    # Phase 2: Mango YAML (optional, iterative)
+    if not processed:
+        print("\nNo devices were successfully processed.")
+        return
+
+    confirm_yaml = input("\nGenerate mango YAML files for processed devices? (y/n): ").strip().lower()
+    if confirm_yaml != "y":
+        return
+
+    save_dir = input("Enter output directory for YAML files: ").strip().strip('"').strip("'")
+
+    for entry in processed:
+        print(f"\n--- YAML: {entry['folder']} ---")
+
+        missing_fields = add_missing_points(entry["asset_name"])
+        general_type = main_script.get_general_type()
+        type_name = main_script.get_type_name()
+
+        df = build_translation_dataframe(
+            entry["updated_points"], unit_map,
+            entry["asset_name"], general_type, type_name,
+        )
+
+        if missing_fields:
+            missing_rows = pd.DataFrame([{
+                "assetName": entry["asset_name"],
+                "object_name": "MISSING",
+                "standardFieldName": field,
+                "raw_units": "MISSING",
+                "DBO_standard_units": "MISSING",
+                "generalType": general_type,
+                "typeName": type_name,
+            } for field in missing_fields])
+            df = pd.concat([df, missing_rows], ignore_index=True)
+
+        site = entry["parsed"].get("system", {}).get("location", {}).get("site", "")
+        auto_filename = f"{site}_{entry['asset_name']}" if site else entry["asset_name"]
+        translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir)

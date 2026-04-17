@@ -1,0 +1,18 @@
+{
+  "system": {
+    "location": {
+      "site": "US-MTV-TEST"
+    },
+    "name": "Main_Meter"
+  },
+  "pointset": {
+    "points": {
+      "kw": { "units": "kW", "writable": false, "ref": "DP_MAIN_kW" },
+      "kwh": { "units": "kWh", "writable": false, "ref": "DP_MAIN_kWh" },
+      "kvar": { "units": "kVAR", "writable": false, "ref": "DP_MAIN_kVAR" },
+      "pf": { "units": "no_units", "writable": false, "ref": "DP_MAIN_PF" },
+      "current": { "units": "A", "writable": false, "ref": "DP_MAIN_Current" },
+      "volts_ln": { "units": "V", "writable": false, "ref": "DP_MAIN_Volts_LN" }
+    }
+  }
+}
