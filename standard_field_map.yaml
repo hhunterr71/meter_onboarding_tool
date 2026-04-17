@@ -14,6 +14,8 @@ EM:
     - Volts_LN
   energy_accumulator:
     - kWh
+  exported_energy_accumulator:
+    - kWh_rec
   line_frequency_sensor:
     - Frequency
     - Freq
@@ -65,25 +67,23 @@ EM:
     - kVAR
   IGNORE:
     - Data_Stale
-    - kWh_rec
-    - Cumulative_kVARh_Discharged
     - Run_Time
     - Minute_Time
     - Second_Time
     - Cumulative_kWh_Charged
     - Cumulative_kWh_Discharged
     - Cumulative_kVARh_Charged
+    - Cumulative_kVARh_Discharged
 
 WM:
-  flow_sensor:
+  flowrate_sensor:
     - Flow
     - WaterFlow
-  pressure_sensor:
-    - Pressure
-    - WaterPressure
-  volume_accumulator:
+    - WaterFlowRate
+  water_volume_accumulator:
     - TotalVolume
     - Volume
+    - WaterFlowTotal
 
 GM:
   gas_flow_sensor:

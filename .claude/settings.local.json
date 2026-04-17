@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv/Scripts/python.exe -m pytest test_meter_onboard.py -v)",
+      "Bash(venv/Scripts/python.exe -m pytest test_meter_onboard.py --cov=main_script --cov=translation_builder --cov-report=term-missing)",
+      "Bash(venv/Scripts/python.exe:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
