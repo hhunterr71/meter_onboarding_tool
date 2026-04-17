@@ -3,8 +3,12 @@
 Demo script to test the meter onboard tool functionality
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import json
-import main_script
+import bitbox_script as main_script
 from translation_builder import translation_builder
 
 def test_functionality():

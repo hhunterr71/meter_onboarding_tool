@@ -3,8 +3,8 @@
 # Default settings
 defaults:
   general_type: "METER"
-  field_map_file: "standard_field_map.yaml"
-  unit_map_file: "raw_units.yaml"
+  field_map_file: "mappings/standard_field_map.yaml"
+  unit_map_file: "mappings/raw_units.yaml"
 
 # Logging configuration
 logging:

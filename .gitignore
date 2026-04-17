@@ -25,3 +25,5 @@ Thumbs.db
 metering/
 logs/
 *.log
+.coverage
+*.coverage

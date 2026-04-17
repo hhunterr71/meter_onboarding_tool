@@ -1,0 +1,192 @@
+{
+  "timestamp": "2026-02-13T15:38:34Z",
+  "version": "1.5.3",
+  "cloud": {
+    "resource_type": "PROXIED",
+    "num_id": 253839025000235
+  },
+  "system": {
+    "location": {
+      "site": "US-MTV-1667"
+    },
+    "serial_no": "unknown",
+    "hardware": {
+      "make": "",
+      "model": ""
+    },
+    "software": { },
+    "min_loglevel": 300,
+    "name": "PV_Meter",
+    "description": "PV_Meter",
+    "device_version": "1.5.3",
+    "node_type": "field_device",
+    "tags": [
+      "modbus",
+      "renewable_energy",
+      "serial"
+    ],
+    "physical_tag": {
+      "asset": {
+        "guid": "uuid://42e27103-8143-4656-b65b-dbbd1d716287",
+        "site": "US-MTV-1667",
+        "name": "PVI-5"
+      }
+    }
+  },
+  "gateway": {
+    "gateway_id": "CGW-2",
+    "target": {
+      "family": "vendor"
+    }
+  },
+  "discovery": {
+    "families": {
+      "vendor": { },
+      "iot": { }
+    }
+  },
+  "localnet": {
+    "families": {
+      "iot": {
+        "addr": "PVI-5"
+      }
+    },
+    "parent": {
+      "target": "CGW-2",
+      "family": "modbus"
+    }
+  },
+  "testing": {
+    "targets": {
+      "applied": {
+        "target_point": "Volts_CN",
+        "target_value": 94
+      },
+      "tweaked_ref": {
+        "target_point": "Volts_CN"
+      },
+      "invalid": {
+        "target_point": "Volts_CN",
+        "target_value": [ ]
+      },
+      "scan_family": {
+        "target_value": "vendor"
+      }
+    }
+  },
+  "policy": {
+    "rule_sets": [
+      "mqtt",
+      "telemetry"
+    ]
+  },
+  "pointset": {
+    "points": {
+      "phase3_neutral_line_voltage_sensor": {
+        "units": "V",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Volts_CN"
+      },
+      "phase2_neutral_line_voltage_sensor": {
+        "units": "V",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Volts_BN"
+      },
+      "phase1_neutral_line_voltage_sensor": {
+        "units": "V",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Volts_AN"
+      },
+      "phase2_power_sensor": {
+        "units": "kW",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_KW_B"
+      },
+      "power_sensor": {
+        "units": "kW",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_kW"
+      },
+      "phase1_power_sensor": {
+        "units": "kW",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_KW_A"
+      },
+      "average_inter_line_voltage_sensor": {
+        "units": "V",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Volts_LL"
+      },
+      "phase1_phase2_line_voltage_sensor": {
+        "units": "V",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Volts_AB"
+      },
+      "phase2_phase3_line_voltage_sensor": {
+        "units": "V",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Volts_BC"
+      },
+      "average_line_neutral_voltage_sensor": {
+        "units": "V",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Volts_LN"
+      },
+      "phase3_power_sensor": {
+        "units": "kW",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_KW_C"
+      },
+      "phase1_phase3_line_voltage_sensor": {
+        "units": "V",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Volts_CA"
+      },
+      "phase2_line_current_sensor": {
+        "units": "A",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Current_B"
+      },
+      "line_frequency_sensor": {
+        "units": "no_units",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Freq"
+      },
+      "phase3_line_current_sensor": {
+        "units": "A",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Current_C"
+      },
+      "phase2_powerfactor_sensor": {
+        "units": "no_units",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_PF_B"
+      },
+      "phase1_powerfactor_sensor": {
+        "units": "no_units",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_PF_A"
+      },
+      "energy_accumulator": {
+        "units": "kWh",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_kWh"
+      },
+      "average_line_current_sensor": {
+        "units": "A",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Current"
+      },
+      "phase1_line_current_sensor": {
+        "units": "A",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_Current_A"
+      },
+      "phase3_powerfactor_sensor": {
+        "units": "no_units",
+        "writable": false,
+        "ref": "DP_Comm2_PV_Meter_PF_C"
+      }
+    }
+  }
+}

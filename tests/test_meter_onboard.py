@@ -3,15 +3,18 @@
 Unit tests for Meter Onboard Tool
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import unittest
 import json
 import tempfile
-import os
 from unittest.mock import patch, mock_open
 import pandas as pd
 
 # Import modules to test
-import main_script
+import bitbox_script as main_script
 from translation_builder import translation_builder
 
 
@@ -230,8 +233,4 @@ class TestIntegration(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # Add current directory to path for imports
-    import sys
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    
     unittest.main(verbosity=2)
