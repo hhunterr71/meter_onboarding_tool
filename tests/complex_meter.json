@@ -1,0 +1,189 @@
+{
+  "timestamp" : "2026-04-16T20:11:02Z",
+  "version" : "1.5.3",
+  "cloud" : {
+    "resource_type" : "PROXIED"
+  },
+  "system" : {
+    "location" : {
+      "site" : "US-SVL-CRBN100"
+    },
+    "serial_no" : "unknown",
+    "hardware" : {
+      "make" : "",
+      "model" : ""
+    },
+    "software" : { },
+    "min_loglevel" : 300
+  },
+  "gateway" : {
+    "gateway_id" : "CGW-2",
+    "target" : {
+      "family" : "iot"
+    }
+  },
+  "discovery" : {
+    "families" : {
+      "vendor" : { },
+      "iot" : { }
+    }
+  },
+  "localnet" : {
+    "families" : {
+      "iot" : {
+        "addr" : "EM-100"
+      }
+    }
+  },
+  "testing" : {
+    "targets" : {
+      "applied" : {
+        "target_point" : "Volts_CN",
+        "target_value" : 89
+      },
+      "failure" : {
+        "target_point" : "Ping",
+        "target_value" : 74
+      },
+      "tweaked_ref" : {
+        "target_point" : "Ping"
+      },
+      "invalid" : {
+        "target_point" : "Ping",
+        "target_value" : [ ]
+      },
+      "scan_family" : {
+        "target_value" : "vendor"
+      }
+    }
+  },
+  "pointset" : {
+    "points" : {
+      "Volts_CN" : {
+        "units" : "V",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Volts_CN"
+      },
+      "Volts_AN" : {
+        "units" : "V",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Volts_AN"
+      },
+      "kW" : {
+        "units" : "kW",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_kW"
+      },
+      "kVAR" : {
+        "units" : "kV·A",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_kVAR"
+      },
+      "Volts_AB" : {
+        "units" : "V",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Volts_AB"
+      },
+      "Volts_CA" : {
+        "units" : "V",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Volts_CA"
+      },
+      "kVA" : {
+        "units" : "kV·A",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_kVA"
+      },
+      "PF_B" : {
+        "units" : "",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_PF_B"
+      },
+      "PF_A" : {
+        "units" : "",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_PF_A"
+      },
+      "kWh" : {
+        "units" : "kW·h",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_kWh"
+      },
+      "PF_C" : {
+        "units" : "",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_PF_C"
+      },
+      "kW_C" : {
+        "units" : "kW",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_kW_C"
+      },
+      "Volts_BN" : {
+        "units" : "V",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Volts_BN"
+      },
+      "Volts_LL" : {
+        "units" : "V",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Volts_LL"
+      },
+      "Volts_BC" : {
+        "units" : "V",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Volts_BC"
+      },
+      "Volts_LN" : {
+        "units" : "V",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Volts_LN"
+      },
+      "PF" : {
+        "units" : "",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_PF"
+      },
+      "Ping" : {
+        "units" : "ms",
+        "writable" : false,
+        "ref" : "DP_MONITOR_LPD_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator"
+      },
+      "Current_B" : {
+        "units" : "A",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Current_B"
+      },
+      "Current_C" : {
+        "units" : "A",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Current_C"
+      },
+      "Frequency" : {
+        "units" : "Hz",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Frequency"
+      },
+      "Current" : {
+        "units" : "A",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Current"
+      },
+      "kW_B" : {
+        "units" : "kW",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_kW_B"
+      },
+      "Current_A" : {
+        "units" : "A",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_Current_A"
+      },
+      "kW_A" : {
+        "units" : "kW",
+        "writable" : true,
+        "ref" : "DP_Comm2_dev_20_EM-100_Dist-L1-1ECLS1-Generator_kW_A"
+      }
+    }
+  }
+}

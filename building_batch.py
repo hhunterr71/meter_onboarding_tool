@@ -144,7 +144,12 @@ def run_building_batch() -> None:
         if raw_name is None:
             raw_name = parsed.get("system", {}).get("name", "UNKNOWN")
             print(f"  Could not extract asset name from refs, falling back to: {raw_name}")
-        asset_name = build_yaml_asset_name(raw_name, meter_type)
+        suggested = build_yaml_asset_name(raw_name, meter_type)
+        sample_ref = next((p.get("ref") for p in points.values() if p.get("ref")), None)
+        if sample_ref:
+            print(f"Sample ref: {sample_ref}")
+        override = input(f"Asset name: [{suggested}] (press Enter to accept or type a new name): ").strip()
+        asset_name = override if override else suggested
         num_id = str(parsed.get("cloud", {}).get("num_id", ""))
         processed.append({
             "folder": folder,

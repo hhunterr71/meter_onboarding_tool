@@ -143,26 +143,31 @@ def save_updated_json(
 
 def extract_asset_name_from_refs(points: Dict[str, Any], meter_type: str) -> Optional[str]:
     """
-    Find the common prefix across all point refs, truncate at the last '_'
-    to get the device path, then extract the asset name using the meter type
-    as an anchor (e.g. 'EM-'). Returns None if extraction fails.
+    For each point, use the key's underscore count to determine how many trailing
+    ref segments belong to the field name, strip them, then locate the meter-type
+    anchor (e.g. 'EM-') to extract the asset name. Returns the most-voted candidate,
+    or None if no valid candidate is found.
     """
-    refs = [p.get("ref", "") for p in points.values() if p.get("ref")]
-    if not refs:
-        return None
-
-    common = os.path.commonprefix(refs)
-    last_under = common.rfind("_")
-    if last_under == -1:
-        return None
-    device_path = common[:last_under]
-
     search_prefix = f"{meter_type}-"
-    idx = device_path.find(search_prefix)
-    if idx != -1:
-        return device_path[idx:]
+    candidates: Dict[str, int] = {}
 
-    return None
+    for point_key, point_data in points.items():
+        ref = point_data.get("ref", "")
+        if not ref:
+            continue
+        num_segments = point_key.count("_") + 1
+        ref_parts = ref.split("_")
+        if len(ref_parts) <= num_segments:
+            continue
+        device_str = "_".join(ref_parts[:-num_segments])
+        idx = device_str.find(search_prefix)
+        if idx != -1:
+            name = device_str[idx:]
+            candidates[name] = candidates.get(name, 0) + 1
+
+    if not candidates:
+        return None
+    return max(candidates, key=lambda k: candidates[k])
 
 
 def build_yaml_asset_name(raw_name: str, meter_type: str) -> str:
@@ -241,7 +246,12 @@ def run_site_model_editor() -> None:
     if raw_name is None:
         raw_name = parsed.get("system", {}).get("name", "UNKNOWN")
         print(f"Could not extract asset name from refs, falling back to: {raw_name}")
-    asset_name = build_yaml_asset_name(raw_name, meter_type)
+    suggested = build_yaml_asset_name(raw_name, meter_type)
+    sample_ref = next((p.get("ref") for p in points.values() if p.get("ref")), None)
+    if sample_ref:
+        print(f"\nSample ref: {sample_ref}")
+    override = input(f"Asset name: [{suggested}] (press Enter to accept or type a new name): ").strip()
+    asset_name = override if override else suggested
     site = parsed.get("system", {}).get("location", {}).get("site", "")
     auto_filename = f"{site}_{asset_name}" if site else asset_name
 
