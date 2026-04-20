@@ -3,21 +3,25 @@ import pandas as pd
 import yaml
 import os
 
-def translation_builder_mango(df: pd.DataFrame, auto_filename: str = "output", save_dir: str = None) -> str:
+def translation_builder_mango(df: pd.DataFrame, auto_filename: str = "output", save_dir: str = None, num_id: str = "") -> str:
     yaml_output: Dict[str, Any] = {}
 
     for _, row in df.iterrows():
-        device = row['assetName']
         field_key = row['standardFieldName']
+        if not field_key:
+            continue
+        device = row['assetName']
 
-        if device not in yaml_output:
-            yaml_output[device] = {
+        if not yaml_output:
+            yaml_output = {
+                'cloud_device_id': num_id,
+                'asset_name': device,
                 'translation': {},
                 'type': f"METERS/{row['typeName']}",
                 'update_mask': ['type', 'translation'],
             }
 
-        translations = yaml_output[device]['translation']
+        translations = yaml_output['translation']
 
         if field_key not in translations:
             if row['object_name'].lower() == "missing":

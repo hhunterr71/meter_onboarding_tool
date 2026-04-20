@@ -50,18 +50,18 @@ def test_functionality():
     print("Loading field and unit mappings...")
     try:
         field_map = main_script.load_field_mapping("EM")
-        unit_map = main_script.load_unit_mapping()
+        field_dbo_units = main_script.load_field_dbo_units("EM")
         print("Mappings loaded successfully")
     except Exception as e:
         print(f"Error loading mappings: {e}")
         return
-    
+
     print()
-    
+
     # Process data
     print("Processing meter data...")
     try:
-        df, asset_name = main_script.prepare_dataframe(sample_json, field_map, unit_map)
+        df, asset_name = main_script.prepare_dataframe(sample_json, field_map, field_dbo_units)
         print(f"Data processed successfully for asset: {asset_name}")
         print(f"Generated DataFrame with {len(df)} rows")
         print()
@@ -75,22 +75,13 @@ def test_functionality():
         df["generalType"] = "METER"
         df["typeName"] = "Power"
         
-        # Generate YAML translation (with mock input for save prompt)
+        # Generate YAML translation
         print("Generating YAML translation...")
-        
-        # Mock the input function to avoid interactive prompts
-        import builtins
-        original_input = builtins.input
-        builtins.input = lambda prompt: "n"  # Don't save file
-        
-        try:
-            yaml_output = translation_builder(df)
-            print("YAML translation generated successfully!")
-            print()
-            print("Generated YAML:")
-            print(yaml_output)
-        finally:
-            builtins.input = original_input
+        yaml_output = translation_builder(df, auto_filename="demo_test", save_dir="")
+        print("YAML translation generated successfully!")
+        print()
+        print("Generated YAML:")
+        print(yaml_output)
             
     except Exception as e:
         print(f"Error processing data: {e}")

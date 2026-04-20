@@ -11,9 +11,13 @@ from site_model_editor import (
     build_case_insensitive_field_map,
     process_points,
     print_review,
+    apply_resolution,
     build_translation_dataframe,
     add_missing_points,
+    extract_asset_name_from_refs,
+    build_yaml_asset_name,
 )
+from field_map_utils import resolve_unmatched
 from translation_builder_mango import translation_builder_mango
 
 
@@ -78,7 +82,6 @@ def run_building_batch() -> None:
         return
 
     selected = select_devices(folders)
-    unit_map = main_script.load_unit_mapping()
     processed = []
 
     # Phase 1: JSON rename (overwrite in place, no missing fields prompt)
@@ -103,14 +106,32 @@ def run_building_batch() -> None:
         meter_type = input("Enter meter type (EM, WM, GM): ").strip().upper()
         try:
             ci_field_map = build_case_insensitive_field_map(meter_type)
+            field_dbo_units = main_script.load_field_dbo_units(meter_type)
+            field_standard_units = main_script.load_field_standard_units(meter_type)
         except ValueError as e:
             print(e)
             print(f"Skipping {folder}.")
             continue
 
         points = parsed["pointset"]["points"]
-        updated_points, mapped_summary, unmatched = process_points(points, ci_field_map, unit_map)
-        print_review(mapped_summary, unmatched)
+        yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mappings", "standard_field_map.yaml")
+        all_to_skip: set = set()
+
+        while True:
+            ci_field_map = build_case_insensitive_field_map(meter_type)
+            updated_points, mapped_summary, unmatched = process_points(points, ci_field_map, field_dbo_units)
+            remaining = [k for k in unmatched if k not in all_to_skip]
+            print_review(mapped_summary, remaining)
+
+            if not remaining:
+                break
+
+            to_skip_new, retry = resolve_unmatched(remaining, meter_type, yaml_path)
+            all_to_skip |= to_skip_new
+            if not retry:
+                break
+
+        updated_points = apply_resolution(updated_points, all_to_skip)
 
         confirm = input("\nContinue with these mappings? (y/n): ").strip().lower()
         if confirm != "y":
@@ -119,12 +140,19 @@ def run_building_batch() -> None:
 
         overwrite_json(file_path, parsed, updated_points)
 
-        asset_name = parsed.get("system", {}).get("name", "UNKNOWN")
+        raw_name = extract_asset_name_from_refs(points, meter_type)
+        if raw_name is None:
+            raw_name = parsed.get("system", {}).get("name", "UNKNOWN")
+            print(f"  Could not extract asset name from refs, falling back to: {raw_name}")
+        asset_name = build_yaml_asset_name(raw_name, meter_type)
+        num_id = str(parsed.get("cloud", {}).get("num_id", ""))
         processed.append({
             "folder": folder,
             "parsed": parsed,
             "updated_points": updated_points,
             "asset_name": asset_name,
+            "field_standard_units": field_standard_units,
+            "num_id": num_id,
         })
 
     # Phase 2: Mango YAML (optional, iterative)
@@ -146,7 +174,8 @@ def run_building_batch() -> None:
         type_name = main_script.get_type_name()
 
         df = build_translation_dataframe(
-            entry["updated_points"], unit_map,
+            entry["updated_points"],
+            entry["field_standard_units"],
             entry["asset_name"], general_type, type_name,
         )
 
@@ -164,4 +193,4 @@ def run_building_batch() -> None:
 
         site = entry["parsed"].get("system", {}).get("location", {}).get("site", "")
         auto_filename = f"{site}_{entry['asset_name']}" if site else entry["asset_name"]
-        translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir)
+        translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir, num_id=entry["num_id"])

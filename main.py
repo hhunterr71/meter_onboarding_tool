@@ -7,8 +7,8 @@ def show_menu() -> str:
     print("\n=== Meter Onboard Tool ===")
     print("1. Translation Builder (BITBOX)")
     print("2. Translation Builder (MANGO)")
-    print("3. Site Model Meter Editor")
-    print("4. Building Batch Processor")
+    print("3. Single JSON Site Model Editior (single json input)")
+    print("4. Batch Site Model Editor (full site model input)")
     while True:
         choice = input("Select an option (1-4): ").strip()
         if choice in ("1", "2", "3", "4"):

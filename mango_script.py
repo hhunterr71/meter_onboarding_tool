@@ -1,10 +1,12 @@
 import json
 import logging
-from typing import Dict, Any, Tuple
+import os
+from typing import Dict, Any, Tuple, List
 import pandas as pd
 
 import bitbox_script as main_script
 from translation_builder_mango import translation_builder_mango
+from field_map_utils import resolve_unmatched
 
 
 def validate_json_structure_mango(parsed: Dict[str, Any]) -> bool:
@@ -33,29 +35,67 @@ def validate_json_structure_mango(parsed: Dict[str, Any]) -> bool:
     return True
 
 
-def prepare_dataframe_mango(parsed: Dict[str, Any], unit_map: Dict[str, str]) -> Tuple[pd.DataFrame, str]:
+def prepare_dataframe_mango(
+    parsed: Dict[str, Any],
+    field_dbo_units: Dict[str, str],
+    field_standard_units: Dict[str, str],
+) -> Tuple[pd.DataFrame, str]:
     points = parsed["points"]
     asset_name = parsed.get("device_id", "UNKNOWN")
 
     rows = []
-    for field_name, point_data in points.items():
+    for object_name, point_data in points.items():
+        # Mango point keys are already standard field names
+        standard_field = object_name if object_name in field_dbo_units else ""
         rows.append({
             "assetName": asset_name,
-            "object_name": field_name,
-            "standardFieldName": field_name,
-            "raw_units": point_data.get("units", ""),
-            "DBO_standard_units": unit_map.get(point_data.get("units", ""), ""),
+            "object_name": object_name,
+            "standardFieldName": standard_field,
+            "raw_units": field_standard_units.get(standard_field, point_data.get("units", "")),
+            "DBO_standard_units": field_dbo_units.get(standard_field, ""),
         })
 
     df = pd.DataFrame(rows, columns=["assetName", "object_name", "standardFieldName", "raw_units", "DBO_standard_units"])
     return df, asset_name
 
 
+def resolve_unmatched_df_mango(
+    df: pd.DataFrame,
+    meter_type: str,
+    yaml_path: str,
+    all_to_skip: set,
+) -> Tuple[pd.DataFrame, bool]:
+    """
+    Resolve rows where standardFieldName is empty (unmatched).
+    Returns updated df (skips removed) and retry flag.
+    """
+    unmatched_keys: List[str] = [
+        k for k in df.loc[df["standardFieldName"] == "", "object_name"].tolist()
+        if k not in all_to_skip
+    ]
+    if not unmatched_keys:
+        return df, False
+    to_skip_new, retry = resolve_unmatched(unmatched_keys, meter_type, yaml_path)
+    all_to_skip |= to_skip_new
+    df = df[~df["object_name"].isin(all_to_skip)].reset_index(drop=True)
+    return df, retry
+
+
 def run_mango() -> None:
     logger = logging.getLogger(__name__)
     logger.info("Starting MANGO Translation Builder")
 
-    unit_map = main_script.load_unit_mapping()
+    meter_type = main_script.get_meter_type()
+    try:
+        field_dbo_units = main_script.load_field_dbo_units(meter_type)
+        field_standard_units = main_script.load_field_standard_units(meter_type)
+        logger.info("Field mapping loaded successfully")
+    except ValueError as e:
+        print(e)
+        return
+    except Exception as e:
+        print(f"Error loading field mapping: {e}")
+        return
 
     json_str = main_script.get_json_string()
     try:
@@ -68,9 +108,24 @@ def run_mango() -> None:
         print("JSON validation failed. Please check the structure and try again.")
         return
 
-    df, asset_name = prepare_dataframe_mango(parsed, unit_map)
+    cfg = main_script.load_config()
+    yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), cfg["defaults"]["field_map_file"])
+    all_to_skip: set = set()
 
-    main_script.print_and_copy_table(df)
+    while True:
+        field_dbo_units = main_script.load_field_dbo_units(meter_type)
+        field_standard_units = main_script.load_field_standard_units(meter_type)
+        df, asset_name = prepare_dataframe_mango(parsed, field_dbo_units, field_standard_units)
+        df = df[~df["object_name"].isin(all_to_skip)].reset_index(drop=True)
+        main_script.print_and_copy_table(df)
+
+        if not (df["standardFieldName"] == "").any():
+            break
+
+        df, retry = resolve_unmatched_df_mango(df, meter_type, yaml_path, all_to_skip)
+        if not retry:
+            break
+
     main_script.confirm_mapping()
     main_script.get_standard_fields(df)
 
@@ -87,5 +142,6 @@ def run_mango() -> None:
         auto_filename = f"{building_code}_{asset_name}" if building_code else asset_name
 
         yaml_string = translation_builder_mango(df, auto_filename=auto_filename)
-        print("\nYAML Output:\n")
-        print(yaml_string)
+        print("\nYAML Build Complete\n")        
+        # print("\nYAML Output:\n")
+        # print(yaml_string)

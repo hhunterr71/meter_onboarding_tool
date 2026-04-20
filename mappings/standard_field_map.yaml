@@ -1,71 +1,146 @@
-# METER TYPE
-  # standard_field_name
-    # - objectName (from export)
-
-
 EM:
   apparent_power_sensor:
+    dbo_unit: kilovolt_amperes
+    standard_unit: kilo-volt-amperes
+    names:
     - kVA
+    - kV·A
   average_inter_line_voltage_sensor:
+    dbo_unit: volts
+    standard_unit: volts
+    names:
     - Volts_LL
   average_line_current_sensor:
+    dbo_unit: amperes
+    standard_unit: amperes
+    names:
     - Current
   average_line_neutral_voltage_sensor:
+    dbo_unit: volts
+    standard_unit: volts
+    names:
     - Volts_LN
   energy_accumulator:
+    dbo_unit: kilowatt_hours
+    standard_unit: kilowatt-hours
+    names:
     - kWh
+    - kV·h
   exported_energy_accumulator:
+    dbo_unit: kilowatt_hours
+    standard_unit: kilowatt-hours
+    names:
     - kWh_rec
   line_frequency_sensor:
+    dbo_unit: hertz
+    standard_unit: hertz
+    names:
     - Frequency
     - Freq
   phase1_line_current_sensor:
+    dbo_unit: amperes
+    standard_unit: amperes
+    names:
     - Current_A
     - Phase_Line_Current_I1
   phase2_line_current_sensor:
+    dbo_unit: amperes
+    standard_unit: amperes
+    names:
     - Current_B
     - Phase_Line_Current_I2
   phase3_line_current_sensor:
+    dbo_unit: amperes
+    standard_unit: amperes
+    names:
     - Current_C
     - Phase_Line_Current_I3
   phase1_neutral_line_voltage_sensor:
+    dbo_unit: volts
+    standard_unit: volts
+    names:
     - Volts_AN
     - Volts_A
   phase2_neutral_line_voltage_sensor:
+    dbo_unit: volts
+    standard_unit: volts
+    names:
     - Volts_BN
     - Volts_B
   phase3_neutral_line_voltage_sensor:
+    dbo_unit: volts
+    standard_unit: volts
+    names:
     - Volts_CN
     - Volts_C
   phase1_phase2_line_voltage_sensor:
+    dbo_unit: volts
+    standard_unit: volts
+    names:
     - Volts_AB
     - Line_voltage_V12
   phase1_phase3_line_voltage_sensor:
+    dbo_unit: volts
+    standard_unit: volts
+    names:
     - Volts_AC
     - Line_voltage_V31
     - Volts_CA
   phase2_phase3_line_voltage_sensor:
+    dbo_unit: volts
+    standard_unit: volts
+    names:
     - Volts_BC
     - Line_voltage_V23
   phase1_power_sensor:
+    dbo_unit: kilowatts
+    standard_unit: kilowatts
+    names:
     - kW_A
   phase2_power_sensor:
+    dbo_unit: kilowatts
+    standard_unit: kilowatts
+    names:
     - kW_B
   phase3_power_sensor:
+    dbo_unit: kilowatts
+    standard_unit: kilowatts
+    names:
     - kW_C
   power_sensor:
+    dbo_unit: kilowatts
+    standard_unit: kilowatts
+    names:
     - kW
   phase1_powerfactor_sensor:
+    dbo_unit: no_units
+    standard_unit: no-units
+    names:
     - PF_A
   phase2_powerfactor_sensor:
+    dbo_unit: no_units
+    standard_unit: no-units
+    names:
     - PF_B
   phase3_powerfactor_sensor:
+    dbo_unit: no_units
+    standard_unit: no-units
+    names:
     - PF_C
   powerfactor_sensor:
+    dbo_unit: no_units
+    standard_unit: no-units
+    names:
     - PF
   reactive_power_sensor:
+    dbo_unit: kilovolt_amperes_reactive
+    standard_unit: kilo-volt-amperes-reactive
+    names:
     - kVAR
   IGNORE:
+    dbo_unit: null
+    standard_unit: null
+    names:
     - Data_Stale
     - Run_Time
     - Minute_Time
@@ -77,18 +152,40 @@ EM:
 
 WM:
   flowrate_sensor:
+    dbo_unit: gallons-per-minute
+    standard_unit: gallons-per-minute
+    names:
     - Flow
     - WaterFlow
     - WaterFlowRate
   water_volume_accumulator:
+    dbo_unit: us_gallons
+    standard_unit: us-gallons
+    names:
     - TotalVolume
     - Volume
     - WaterFlowTotal
-
+  IGNORE:
+    dbo_unit: null
+    standard_unit: null
+    names: null
 GM:
   gas_flow_sensor:
+    dbo_unit: cubic_feet_per_hour
+    standard_unit: cubic-feet-per-hour
+    names:
     - GasFlow
-  gas_pressure_sensor:
+  gas_temperature_sensor:
+    dbo_unit: degrees-fahrenheit
+    standard_unit: degrees_farenheit
+    names:
     - GasPressure
   gas_volume_accumulator:
+    dbo_unit: cubic_feet
+    standard_unit: cubic-feet
+    names:
     - GasVolume
+  IGNORE:
+    dbo_unit: null
+    standard_unit: null
+    names: null

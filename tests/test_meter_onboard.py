@@ -36,10 +36,10 @@ class TestMainScript(unittest.TestCase):
             "kW": "active_power_sensor",
             "Frequency": "line_frequency_sensor"
         }
-        
-        self.sample_unit_map = {
-            "kilowatts": "kilowatts",
-            "hertz": "hertz"
+
+        self.sample_field_dbo_units = {
+            "active_power_sensor": "kilowatts",
+            "line_frequency_sensor": "hertz"
         }
 
     def test_validate_json_structure_valid(self):
@@ -66,9 +66,9 @@ class TestMainScript(unittest.TestCase):
     def test_prepare_dataframe(self):
         """Test dataframe preparation"""
         df, asset_name = main_script.prepare_dataframe(
-            self.sample_json, 
-            self.sample_field_map, 
-            self.sample_unit_map
+            self.sample_json,
+            self.sample_field_map,
+            self.sample_field_dbo_units
         )
         
         self.assertIsInstance(df, pd.DataFrame)
@@ -83,11 +83,11 @@ class TestMainScript(unittest.TestCase):
         """Test successful field mapping load"""
         mock_yaml.return_value = {
             "EM": {
-                "active_power_sensor": ["kW"],
-                "line_frequency_sensor": ["Frequency"]
+                "active_power_sensor": {"dbo_unit": "kilowatts", "standard_unit": "kilowatts", "names": ["kW"]},
+                "line_frequency_sensor": {"dbo_unit": "hertz", "standard_unit": "hertz", "names": ["Frequency"]},
             }
         }
-        
+
         result = main_script.load_field_mapping("EM", "test_field_map.yaml")
         self.assertIsInstance(result, dict)
         self.assertEqual(result["kW"], "active_power_sensor")
@@ -116,24 +116,22 @@ class TestTranslationBuilder(unittest.TestCase):
             'typeName': ['Power', 'Power']
         })
 
-    @patch('builtins.input', return_value='n')
-    def test_translation_builder_basic(self, mock_input):
+    def test_translation_builder_basic(self):
         """Test basic translation builder functionality"""
-        result = translation_builder(self.sample_df)
-        
+        result = translation_builder(self.sample_df, auto_filename="test", save_dir="")
+
         self.assertIsInstance(result, str)
         self.assertIn('PV_Meter', result)
         self.assertIn('translation', result)
         self.assertIn('METERS/Power', result)
 
-    @patch('builtins.input', return_value='n')
-    def test_translation_builder_missing_field(self, mock_input):
+    def test_translation_builder_missing_field(self):
         """Test translation builder with missing field"""
         df_with_missing = self.sample_df.copy()
         df_with_missing.loc[1, 'object_name'] = 'MISSING'
-        
-        result = translation_builder(df_with_missing)
-        
+
+        result = translation_builder(df_with_missing, auto_filename="test", save_dir="")
+
         self.assertIn('MISSING', result)
 
 
@@ -170,30 +168,21 @@ class TestConfigLoading(unittest.TestCase):
 
 def create_test_files():
     """Create minimal test files for integration testing"""
+    import yaml
     test_field_map = {
         "EM": {
-            "active_power_sensor": ["kW"],
-            "line_frequency_sensor": ["Frequency"]
+            "active_power_sensor": {"dbo_unit": "kilowatts", "standard_unit": "kilowatts", "names": ["kW"]},
+            "line_frequency_sensor": {"dbo_unit": "hertz", "standard_unit": "hertz", "names": ["Frequency"]},
         }
     }
-    
-    test_unit_map = {
-        "kilowatts": ["kilowatts"],
-        "hertz": ["hertz"]
-    }
-    
+
     with open("test_standard_field_map.yaml", "w") as f:
-        import yaml
         yaml.dump(test_field_map, f)
-    
-    with open("test_raw_units.yaml", "w") as f:
-        import yaml
-        yaml.dump(test_unit_map, f)
 
 
 def cleanup_test_files():
     """Clean up test files"""
-    test_files = ["test_standard_field_map.yaml", "test_raw_units.yaml"]
+    test_files = ["test_standard_field_map.yaml"]
     for file in test_files:
         if os.path.exists(file):
             os.remove(file)
@@ -223,9 +212,9 @@ class TestIntegration(unittest.TestCase):
         }
         
         field_map = main_script.load_field_mapping("EM", "test_standard_field_map.yaml")
-        unit_map = main_script.load_unit_mapping("test_raw_units.yaml")
-        
-        df, asset_name = main_script.prepare_dataframe(sample_json, field_map, unit_map)
+        field_dbo_units = main_script.load_field_dbo_units("EM", "test_standard_field_map.yaml")
+
+        df, asset_name = main_script.prepare_dataframe(sample_json, field_map, field_dbo_units)
         
         self.assertEqual(asset_name, "power-meter-PV_Meter")
         self.assertEqual(len(df), 1)

@@ -1,11 +1,12 @@
 import json
 import os
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List, Optional, Set
 
 import pandas as pd
 
 import bitbox_script as main_script
 from translation_builder_mango import translation_builder_mango
+from field_map_utils import resolve_unmatched
 
 
 def load_site_model(file_path: str) -> Dict[str, Any]:
@@ -32,11 +33,11 @@ def build_case_insensitive_field_map(meter_type: str) -> Dict[str, str]:
 def process_points(
     points: Dict[str, Any],
     ci_field_map: Dict[str, str],
-    unit_map: Dict[str, str],
+    field_dbo_units: Dict[str, str],
 ) -> Tuple[Dict[str, Any], List[str], List[str]]:
     """
     Returns:
-      updated_points   - dict with renamed keys and normalized units
+      updated_points   - dict with renamed keys; units set to DBO unit from standard field name
       mapped_summary   - list of "original -> standard" strings for review
       unmatched        - list of keys that had no match in the field map
     """
@@ -46,20 +47,25 @@ def process_points(
 
     for raw_key, point_data in points.items():
         standard = ci_field_map.get(raw_key.lower())
-        normalized = {
-            **point_data,
-            "units": unit_map.get(point_data.get("units", ""), point_data.get("units", "")),
-        }
         if standard is None:
             unmatched.append(raw_key)
-            updated[raw_key] = normalized
+            updated[raw_key] = point_data  # keep as-is
         elif standard == "IGNORE":
             pass  # drop the point
         else:
+            normalized = {**point_data, "units": field_dbo_units.get(standard, point_data.get("units", ""))}
             updated[standard] = normalized
             mapped_summary.append(f"  {raw_key:<40} -> {standard}")
 
     return updated, mapped_summary, unmatched
+
+
+def apply_resolution(
+    updated_points: Dict[str, Any],
+    to_skip: Set[str],
+) -> Dict[str, Any]:
+    """Remove skipped keys from updated_points."""
+    return {k: v for k, v in updated_points.items() if k not in to_skip}
 
 
 def print_review(mapped_summary: List[str], unmatched: List[str]) -> None:
@@ -91,21 +97,21 @@ def add_missing_points(asset_name: str) -> List[str]:
 
 def build_translation_dataframe(
     updated_points: Dict[str, Any],
-    unit_map: Dict[str, str],
+    field_standard_units: Dict[str, str],
     asset_name: str,
     general_type: str,
     type_name: str,
 ) -> pd.DataFrame:
     rows = []
     for field_name, point_data in updated_points.items():
-        raw_unit = point_data.get("units", "")
-        canonical_unit = unit_map.get(raw_unit, raw_unit)
+        dbo_unit = point_data.get("units", "")
+        standard_unit = field_standard_units.get(field_name, dbo_unit)
         rows.append({
             "assetName": asset_name,
             "object_name": field_name,
             "standardFieldName": field_name,
-            "raw_units": canonical_unit,
-            "DBO_standard_units": canonical_unit,
+            "raw_units": standard_unit,
+            "DBO_standard_units": dbo_unit,
             "generalType": general_type,
             "typeName": type_name,
         })
@@ -121,7 +127,7 @@ def save_updated_json(
     parsed["pointset"]["points"] = updated_points
     json_string = json.dumps(parsed, indent=2)
 
-    save_path = os.path.join(save_dir, f"{auto_filename}_json.json")
+    save_path = os.path.join(save_dir, f"{auto_filename}_sitejson.json")
     try:
         os.makedirs(save_dir, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:
@@ -135,7 +141,39 @@ def save_updated_json(
         print(f"Failed to save file: {e}")
 
 
+def extract_asset_name_from_refs(points: Dict[str, Any], meter_type: str) -> Optional[str]:
+    """
+    Find the common prefix across all point refs, truncate at the last '_'
+    to get the device path, then extract the asset name using the meter type
+    as an anchor (e.g. 'EM-'). Returns None if extraction fails.
+    """
+    refs = [p.get("ref", "") for p in points.values() if p.get("ref")]
+    if not refs:
+        return None
+
+    common = os.path.commonprefix(refs)
+    last_under = common.rfind("_")
+    if last_under == -1:
+        return None
+    device_path = common[:last_under]
+
+    search_prefix = f"{meter_type}-"
+    idx = device_path.find(search_prefix)
+    if idx != -1:
+        return device_path[idx:]
+
+    return None
+
+
+def build_yaml_asset_name(raw_name: str, meter_type: str) -> str:
+    """Apply meter-type prefix: EM → power-meter-, WM/GM → utility-."""
+    prefix = "power-meter" if meter_type == "EM" else "utility"
+    return f"{prefix}-{raw_name}"
+
+
 def run_site_model_editor() -> None:
+    # --- Phase 1: Update site model JSON ---
+
     # 1. Get file path
     while True:
         file_path = input("Enter the path to the site model JSON file: ").strip().strip('"').strip("'")
@@ -158,55 +196,72 @@ def run_site_model_editor() -> None:
         print("JSON validation failed.")
         return
 
-    # 3. Get meter type
+    num_id = str(parsed.get("cloud", {}).get("num_id", ""))
+
+    # 3. Get meter type and process points
     meter_type = input("Enter meter type (EM, WM, GM): ").strip().upper()
     try:
         ci_field_map = build_case_insensitive_field_map(meter_type)
+        field_dbo_units = main_script.load_field_dbo_units(meter_type)
+        field_standard_units = main_script.load_field_standard_units(meter_type)
     except ValueError as e:
         print(e)
         return
 
-    unit_map = main_script.load_unit_mapping()
-
-    # 4. Process points
     points = parsed["pointset"]["points"]
-    updated_points, mapped_summary, unmatched = process_points(points, ci_field_map, unit_map)
+    yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mappings", "standard_field_map.yaml")
+    all_to_skip: Set[str] = set()
 
-    # 5. Review
-    print_review(mapped_summary, unmatched)
+    # 4. Review and resolve unmatched (retry loop for manual YAML edits)
+    while True:
+        ci_field_map = build_case_insensitive_field_map(meter_type)
+        updated_points, mapped_summary, unmatched = process_points(points, ci_field_map, field_dbo_units)
+        remaining = [k for k in unmatched if k not in all_to_skip]
+        print_review(mapped_summary, remaining)
 
-    # Print comma-separated list of matched standard field names for external use
-    unmatched_set = set(unmatched)
-    matched_fields = [k for k in updated_points if k not in unmatched_set]
-    fields_str = ", ".join(matched_fields)
-    print(f"\nMatched Standard Fields:\n{fields_str}")
+        if not remaining:
+            break
+
+        to_skip_new, retry = resolve_unmatched(remaining, meter_type, yaml_path)
+        all_to_skip |= to_skip_new
+        if not retry:
+            break
+
+    updated_points = apply_resolution(updated_points, all_to_skip)
+    matched_fields = [k for k in updated_points]
+    print(f"\nMatched Standard Fields:\n{', '.join(matched_fields)}")
 
     confirm = input("\nContinue with these mappings? (y/n): ").strip().lower()
     if confirm != "y":
         print("Cancelled.")
         return
 
-    # 6. Add missing fields (returns list only, does NOT modify updated_points)
-    asset_name = parsed.get("system", {}).get("name", "UNKNOWN")
-    missing_fields = add_missing_points(asset_name)
-
-    # 7. Type info
-    general_type = main_script.get_general_type()
-    type_name = main_script.get_type_name()
-
-    # 8. Build auto-filename
+    # 5. Save updated JSON
+    raw_name = extract_asset_name_from_refs(points, meter_type)
+    if raw_name is None:
+        raw_name = parsed.get("system", {}).get("name", "UNKNOWN")
+        print(f"Could not extract asset name from refs, falling back to: {raw_name}")
+    asset_name = build_yaml_asset_name(raw_name, meter_type)
     site = parsed.get("system", {}).get("location", {}).get("site", "")
     auto_filename = f"{site}_{asset_name}" if site else asset_name
 
-    # 9. Ask for output directory once (default: same folder as input file)
     default_dir = os.path.dirname(os.path.abspath(file_path))
     dir_input = input(f"\nEnter output directory (press Enter to use input file's folder):\n  [{default_dir}]: ").strip().strip('"').strip("'")
     save_dir = dir_input if dir_input else default_dir
 
-    # 10. Always export both files
     save_updated_json(parsed, updated_points, auto_filename, save_dir)
 
-    df = build_translation_dataframe(updated_points, unit_map, asset_name, general_type, type_name)
+    # --- Phase 2: Generate mango YAML ---
+
+    confirm_yaml = input("\nGenerate mango YAML for this device? (y/n): ").strip().lower()
+    if confirm_yaml != "y":
+        return
+
+    missing_fields = add_missing_points(asset_name)
+    general_type = main_script.get_general_type()
+    type_name = main_script.get_type_name()
+
+    df = build_translation_dataframe(updated_points, field_standard_units, asset_name, general_type, type_name)
 
     if missing_fields:
         missing_rows = pd.DataFrame([{
@@ -220,4 +275,4 @@ def run_site_model_editor() -> None:
         } for field in missing_fields])
         df = pd.concat([df, missing_rows], ignore_index=True)
 
-    yaml_string = translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir)
+    translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir, num_id=num_id)
