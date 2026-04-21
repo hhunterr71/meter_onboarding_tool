@@ -159,6 +159,14 @@ EM:
     - state
     - solectria_fault_0
     - Ping
+    - dc_voltage_in_01
+    - dc_voltage_in_02
+    - dc_voltage_in_03
+    - dc_current_in_03
+    - dc_current_in_02
+    - dc_current_in_01
+    - daily_active_energy
+ 
  
 
 WM:
