@@ -1,5 +1,6 @@
 from typing import Dict, Any
 import pandas as pd
+import uuid
 import yaml
 import os
 
@@ -37,7 +38,8 @@ def translation_builder_mango(df: pd.DataFrame, auto_filename: str = "output", s
                     }
                 }
 
-    yaml_string = yaml.dump(yaml_output, sort_keys=False)
+    guid = str(uuid.uuid4())
+    yaml_string = yaml.dump({guid: yaml_output}, sort_keys=False)
 
     if save_dir is None:
         # Interactive mode (Mode 2)

@@ -21,12 +21,16 @@ from field_map_utils import resolve_unmatched
 from translation_builder_mango import translation_builder_mango
 
 
+METER_PREFIXES = ("EM-", "GM-", "WM-", "PVI-")
+
+
 def find_device_folders(devices_dir: str) -> List[str]:
     if not os.path.isdir(devices_dir):
         raise FileNotFoundError(f"Devices directory not found: {devices_dir}")
     return sorted([
         name for name in os.listdir(devices_dir)
         if os.path.isdir(os.path.join(devices_dir, name))
+        and any(name.startswith(p) for p in METER_PREFIXES)
     ])
 
 
@@ -116,12 +120,14 @@ def run_building_batch() -> None:
         points = parsed["pointset"]["points"]
         yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mappings", "standard_field_map.yaml")
         all_to_skip: set = set()
+        all_ignored: set = set()
 
         while True:
             ci_field_map = build_case_insensitive_field_map(meter_type)
-            updated_points, mapped_summary, unmatched = process_points(points, ci_field_map, field_dbo_units)
+            updated_points, mapped_summary, unmatched, ignored = process_points(points, ci_field_map, field_dbo_units)
+            all_ignored |= set(ignored)
             remaining = [k for k in unmatched if k not in all_to_skip]
-            print_review(mapped_summary, remaining)
+            print_review(mapped_summary, remaining, ignored)
 
             if not remaining:
                 break
@@ -158,6 +164,7 @@ def run_building_batch() -> None:
             "asset_name": asset_name,
             "field_standard_units": field_standard_units,
             "num_id": num_id,
+            "ignored_keys": all_ignored,
         })
 
     # Phase 2: Mango YAML (optional, iterative)
@@ -178,8 +185,9 @@ def run_building_batch() -> None:
         general_type = main_script.get_general_type()
         type_name = main_script.get_type_name()
 
+        yaml_points = {k: v for k, v in entry["updated_points"].items() if k not in entry["ignored_keys"]}
         df = build_translation_dataframe(
-            entry["updated_points"],
+            yaml_points,
             entry["field_standard_units"],
             entry["asset_name"], general_type, type_name,
         )

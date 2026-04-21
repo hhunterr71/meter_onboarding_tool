@@ -149,6 +149,17 @@ EM:
     - Cumulative_kWh_Discharged
     - Cumulative_kVARh_Charged
     - Cumulative_kVARh_Discharged
+    - fault
+    - solectria_pf_fault
+    - heatsinc_temp_c
+    - efficiency
+    - solectria_warning
+    - com_status
+    - internal_temp_c
+    - state
+    - solectria_fault_0
+    - Ping
+ 
 
 WM:
   flowrate_sensor:

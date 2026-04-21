@@ -34,16 +34,18 @@ def process_points(
     points: Dict[str, Any],
     ci_field_map: Dict[str, str],
     field_dbo_units: Dict[str, str],
-) -> Tuple[Dict[str, Any], List[str], List[str]]:
+) -> Tuple[Dict[str, Any], List[str], List[str], List[str]]:
     """
     Returns:
-      updated_points   - dict with renamed keys; units set to DBO unit from standard field name
-      mapped_summary   - list of "original -> standard" strings for review
-      unmatched        - list of keys that had no match in the field map
+      updated_points - renamed keys + IGNORE points kept with raw key
+      mapped_summary - list of "original -> standard" strings for review
+      unmatched      - list of keys with no match in the field map
+      ignored        - list of keys that mapped to IGNORE (kept in JSON, skipped in YAML)
     """
     updated = {}
     mapped_summary = []
     unmatched = []
+    ignored = []
 
     for raw_key, point_data in points.items():
         standard = ci_field_map.get(raw_key.lower())
@@ -51,13 +53,14 @@ def process_points(
             unmatched.append(raw_key)
             updated[raw_key] = point_data  # keep as-is
         elif standard == "IGNORE":
-            pass  # drop the point
+            updated[raw_key] = point_data  # keep unchanged in JSON
+            ignored.append(raw_key)        # track for YAML exclusion
         else:
             normalized = {**point_data, "units": field_dbo_units.get(standard, point_data.get("units", ""))}
             updated[standard] = normalized
             mapped_summary.append(f"  {raw_key:<40} -> {standard}")
 
-    return updated, mapped_summary, unmatched
+    return updated, mapped_summary, unmatched, ignored
 
 
 def apply_resolution(
@@ -68,12 +71,17 @@ def apply_resolution(
     return {k: v for k, v in updated_points.items() if k not in to_skip}
 
 
-def print_review(mapped_summary: List[str], unmatched: List[str]) -> None:
+def print_review(mapped_summary: List[str], unmatched: List[str], ignored: List[str] = []) -> None:
     print("\nField Mapping Results:")
     print(f"  {'Original Key':<40}    Standard Field Name")
     print("  " + "-" * 70)
     for line in mapped_summary:
         print(line)
+
+    if ignored:
+        print(f"\nIgnored points (kept in JSON, skipped in YAML): {len(ignored)}")
+        for key in ignored:
+            print(f"  {key}")
 
     if unmatched:
         print(f"\nUnmatched points (kept as-is): {len(unmatched)}")
@@ -216,13 +224,15 @@ def run_site_model_editor() -> None:
     points = parsed["pointset"]["points"]
     yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mappings", "standard_field_map.yaml")
     all_to_skip: Set[str] = set()
+    all_ignored: Set[str] = set()
 
     # 4. Review and resolve unmatched (retry loop for manual YAML edits)
     while True:
         ci_field_map = build_case_insensitive_field_map(meter_type)
-        updated_points, mapped_summary, unmatched = process_points(points, ci_field_map, field_dbo_units)
+        updated_points, mapped_summary, unmatched, ignored = process_points(points, ci_field_map, field_dbo_units)
+        all_ignored |= set(ignored)
         remaining = [k for k in unmatched if k not in all_to_skip]
-        print_review(mapped_summary, remaining)
+        print_review(mapped_summary, remaining, ignored)
 
         if not remaining:
             break
@@ -271,7 +281,8 @@ def run_site_model_editor() -> None:
     general_type = main_script.get_general_type()
     type_name = main_script.get_type_name()
 
-    df = build_translation_dataframe(updated_points, field_standard_units, asset_name, general_type, type_name)
+    yaml_points = {k: v for k, v in updated_points.items() if k not in all_ignored}
+    df = build_translation_dataframe(yaml_points, field_standard_units, asset_name, general_type, type_name)
 
     if missing_fields:
         missing_rows = pd.DataFrame([{
