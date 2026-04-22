@@ -171,8 +171,8 @@ EM:
 
 WM:
   flowrate_sensor:
-    dbo_unit: gallons-per-minute
-    standard_unit: gallons-per-minute
+    dbo_unit: us_gallons_per_minute
+    standard_unit: us-gallons-per-minute
     names:
     - Flow
     - WaterFlow
@@ -187,7 +187,12 @@ WM:
   IGNORE:
     dbo_unit: null
     standard_unit: null
-    names: null
+    names: 
+    - Ping
+    - Meter_Status
+    - Flow_Temperature
+    - SignalStrength
+    - Run_Hours
 GM:
   gas_flow_sensor:
     dbo_unit: cubic_feet_per_hour
@@ -195,8 +200,8 @@ GM:
     names:
     - GasFlow
   gas_temperature_sensor:
-    dbo_unit: degrees-fahrenheit
-    standard_unit: degrees_farenheit
+    dbo_unit: degrees_fahrenheit
+    standard_unit: degrees-farenheit
     names:
     - GasPressure
   gas_volume_accumulator:
@@ -208,3 +213,4 @@ GM:
     dbo_unit: null
     standard_unit: null
     names: null
+    - Ping

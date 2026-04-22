@@ -77,7 +77,7 @@ def load_field_mapping(meter_type: str, yaml_file: Optional[str] = None) -> Dict
     return {
         object_name: standard_field
         for standard_field, field_data in all_mappings[meter_type].items()
-        for object_name in field_data.get("names", [])
+        for object_name in (field_data.get("names") or [])
     }
 
 
