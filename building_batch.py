@@ -94,9 +94,9 @@ def run_building_batch() -> None:
         return
 
     selected = select_devices(folders)
-    processed = []
+    save_dir: str = ""
 
-    # Phase 1: JSON rename (overwrite in place, no missing fields prompt)
+    # Process each device end-to-end (JSON then YAML) before moving to the next
     for folder in selected:
         file_path = os.path.join(devices_dir, folder, "metadata.json")
         print(f"\n--- Processing: {folder} ---")
@@ -113,6 +113,10 @@ def run_building_batch() -> None:
 
         if not validate_site_model(parsed):
             print(f"Skipping {folder}.")
+            continue
+
+        skip_prompt = input("Would you like to skip this meter? y/n: ")
+        if skip_prompt.lower() == "y":
             continue
 
         meter_type = input("Enter meter type (EM, WM, GM): ").strip().upper()
@@ -146,8 +150,6 @@ def run_building_batch() -> None:
                 break
 
         updated_points = apply_resolution(updated_points, all_to_skip)
-        matched_fields = [k for k in updated_points if k not in all_ignored]
-        # print(f"\nMatched Standard Fields:\n{', '.join(matched_fields)}")
 
         confirm = input("\nContinue with these mappings? (y/n): ").strip().lower()
         if confirm != "y":
@@ -167,47 +169,40 @@ def run_building_batch() -> None:
         num_id = str(parsed.get("cloud", {}).get("num_id", ""))
 
         overwrite_json(file_path, parsed, updated_points)
-        processed.append({
-            "folder": folder,
-            "parsed": parsed,
-            "updated_points": updated_points,
-            "asset_name": asset_name,
-            "field_standard_units": field_standard_units,
-            "num_id": num_id,
-            "ignored_keys": all_ignored,
-            "meter_type": meter_type,
-        })
 
-    # Phase 2: Mango YAML (optional, iterative)
-    if not processed:
-        print("\nNo devices were successfully processed.")
-        return
+        # YAML generation for this device
+        confirm_yaml = input("\nGenerate mango YAML for this device? (y/n): ").strip().lower()
+        if confirm_yaml != "y":
+            continue
 
-    confirm_yaml = input("\nGenerate mango YAML files for processed devices? (y/n): ").strip().lower()
-    if confirm_yaml != "y":
-        return
+        if save_dir:
+            dir_prompt = f"Enter output directory for YAML [{save_dir}]: "
+        else:
+            dir_prompt = "Enter output directory for YAML: "
+        dir_input = input(dir_prompt).strip().strip('"').strip("'")
+        if dir_input:
+            save_dir = dir_input
 
-    save_dir = input("Enter output directory for YAML files: ").strip().strip('"').strip("'")
+        if not save_dir:
+            print("No output directory provided, skipping YAML.")
+            continue
 
-    for entry in processed:
-        print(f"\n--- YAML: {entry['folder']} ---")
-
-        yaml_points = {k: v for k, v in entry["updated_points"].items() if k not in entry["ignored_keys"]}
-        suggested_type, pre_add_fields = run_type_matcher(set(yaml_points.keys()), entry["meter_type"])
+        yaml_points = {k: v for k, v in updated_points.items() if k not in all_ignored}
+        suggested_type, pre_add_fields = run_type_matcher(set(yaml_points.keys()), meter_type)
 
         general_type = main_script.get_general_type()
         type_name = main_script.get_type_name(suggestion=suggested_type)
 
-        missing_fields = add_missing_points(entry["asset_name"], pre_add=pre_add_fields)
+        missing_fields = add_missing_points(asset_name, pre_add=pre_add_fields)
         df = build_translation_dataframe(
             yaml_points,
-            entry["field_standard_units"],
-            entry["asset_name"], general_type, type_name,
+            field_standard_units,
+            asset_name, general_type, type_name,
         )
 
         if missing_fields:
             missing_rows = pd.DataFrame([{
-                "assetName": entry["asset_name"],
+                "assetName": asset_name,
                 "object_name": "MISSING",
                 "standardFieldName": field,
                 "raw_units": "MISSING",
@@ -217,6 +212,6 @@ def run_building_batch() -> None:
             } for field in missing_fields])
             df = pd.concat([df, missing_rows], ignore_index=True)
 
-        site = entry["parsed"].get("system", {}).get("location", {}).get("site", "")
-        auto_filename = f"{site}_{entry['asset_name']}" if site else entry["asset_name"]
-        translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir, num_id=entry["num_id"])
+        site = parsed.get("system", {}).get("location", {}).get("site", "")
+        auto_filename = f"{site}_{asset_name}" if site else asset_name
+        translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir, num_id=num_id)
