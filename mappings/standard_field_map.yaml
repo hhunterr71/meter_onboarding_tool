@@ -37,6 +37,7 @@ EM:
     names:
     - Frequency
     - Freq
+    - frequency10
   phase1_line_current_sensor:
     dbo_unit: amperes
     standard_unit: amperes
@@ -166,8 +167,47 @@ EM:
     - dc_current_in_02
     - dc_current_in_01
     - daily_active_energy
- 
- 
+    - ac_pf_scale_factor
+    - dc_current
+    - ac_volts_scale_factor
+    - dc_power_scale_factor
+    - temp_sink
+    - inverter_status
+    - ac_var_scale_factor
+    - dc_kw
+    - ac_current_scale_factor
+    - ac_va_scale_factor
+    - dc_voltage
+    - ac_power_scale_factor
+    - dc_voltage_scale_factor
+    - temp_sink_scale_factor
+    - ac_wh_scale_factor
+    - inverter_state
+    - dc_current_scale_factor
+    - ac_frequency_scale_factor
+    - kwh_previousyear
+    - kwh_previousmonth
+    - alarm_fanfault
+    - cabinet_temperature_c
+    - kwh_previousday
+    - kwh_yield
+    - dc_current_6
+    - dc_voltage_6
+    - dc_voltage_5
+    - dc_voltage_2
+    - dc_voltage_1
+    - dc_voltage_4
+    - alarm_cabinetovertemp
+    - dc_voltage_3
+    - total_input_power
+    - alarm_sysfault2
+    - alarm_sysfault1
+    - dc_current_1
+    - dc_current_2
+    - dc_current_3
+    - inverter_efficiency
+    - dc_current_4
+    - dc_current_5
 
 WM:
   flowrate_sensor:
@@ -193,6 +233,7 @@ WM:
     - Flow_Temperature
     - SignalStrength
     - Run_Hours
+
 GM:
   gas_flow_sensor:
     dbo_unit: cubic_feet_per_hour
@@ -212,5 +253,5 @@ GM:
   IGNORE:
     dbo_unit: null
     standard_unit: null
-    names: null
+    names:
     - Ping

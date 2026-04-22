@@ -21,7 +21,7 @@ from field_map_utils import resolve_unmatched
 from translation_builder_mango import translation_builder_mango
 
 
-METER_PREFIXES = ("EM-", "GM-", "WM-", "PVI-")
+METER_PREFIXES = ("EM-", "GM-", "WM-", "PVI-", "EMV-")
 
 
 def find_device_folders(devices_dir: str) -> List[str]:
@@ -73,6 +73,13 @@ def run_building_batch() -> None:
             break
         print(f"Directory not found: '{devices_dir}'")
         print("Expected structure: <building_dir>/udmi/devices/")
+
+    # Validate field map YAML before doing any work
+    try:
+        main_script._load_field_map_yaml()
+    except (FileNotFoundError, ValueError, IOError) as e:
+        print(f"\nField map YAML error — please fix before running:\n  {e}")
+        return
 
     # 2. List and select devices
     try:
@@ -138,13 +145,13 @@ def run_building_batch() -> None:
                 break
 
         updated_points = apply_resolution(updated_points, all_to_skip)
+        matched_fields = [k for k in updated_points if k not in all_ignored]
+        print(f"\nMatched Standard Fields:\n{', '.join(matched_fields)}")
 
         confirm = input("\nContinue with these mappings? (y/n): ").strip().lower()
         if confirm != "y":
             print("Skipping.")
             continue
-
-        overwrite_json(file_path, parsed, updated_points)
 
         raw_name = extract_asset_name_from_refs(points, meter_type)
         if raw_name is None:
@@ -157,6 +164,8 @@ def run_building_batch() -> None:
         override = input(f"Asset name: [{suggested}] (press Enter to accept or type a new name): ").strip()
         asset_name = override if override else suggested
         num_id = str(parsed.get("cloud", {}).get("num_id", ""))
+
+        overwrite_json(file_path, parsed, updated_points)
         processed.append({
             "folder": folder,
             "parsed": parsed,

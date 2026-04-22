@@ -25,49 +25,48 @@ def resolve_unmatched(
     yaml_path: Optional[str] = None,
 ) -> Tuple[Set[str], bool]:
     """
-    For each unmatched raw key, prompt: (s)kip, (k)eep as-is, (m)ap manually.
-
-    "m" tells the user to manually add the field to standard_field_map.yaml,
-    then waits for Enter and returns retry=True so the caller can reload the
-    field map and re-run processing.
+    Show sorted list of unmatched fields, then prompt for bulk action:
+      (a) Map all manually — edit YAML, then retry
+      (s) Skip all         — exclude all from output
+      (k) Keep all         — use all raw names unchanged
+      (1) One-by-one       — keep or skip each field individually
 
     Returns:
-      to_skip:  set of raw keys to exclude from output
-      retry:    True if user edited YAML and caller should re-run processing
+      to_skip: set of raw keys to exclude from output
+      retry:   True if user chose 'a' and caller should reload field map and re-run
     """
     if not unmatched:
         return set(), False
 
     resolved_yaml_path = _get_yaml_path(yaml_path)
-    to_skip: Set[str] = set()
-    to_map: List[str] = []
+    sorted_unmatched = sorted(unmatched)
 
-    print(f"\n{len(unmatched)} unmatched field(s) require resolution:")
+    print(f"\n{len(unmatched)} unmatched field(s):")
+    print("  " + ", ".join(sorted_unmatched))
+    print()
+    print("  (a) Map all manually  — edit standard_field_map.yaml, then retry")
+    print("  (s) Skip all          — exclude all from output")
+    print("  (k) Keep all          — use all raw names unchanged")
+    print("  (1) One-by-one        — keep or skip each field individually")
 
-    for raw_key in unmatched:
-        print(f"\n  Unmatched: '{raw_key}'")
-        print("    (s) Skip     — exclude from output")
-        print("    (k) Keep     — use raw name unchanged")
-        print("    (m) Map      — add manually to standard_field_map.yaml")
-        while True:
-            choice = input("  Choice [s/k/m]: ").strip().lower()
-            if choice in ("s", "k", "m"):
-                break
-            print("  Please enter s, k, or m.")
+    while True:
+        bulk = input("Choice [a/s/k/1]: ").strip().lower()
+        if bulk in ("a", "s", "k", "1"):
+            break
+        print("Please enter a, s, k, or 1.")
 
-        if choice == "s":
-            to_skip.add(raw_key)
-            print(f"  '{raw_key}' will be skipped.")
-        elif choice == "k":
-            print(f"  '{raw_key}' kept with raw name.")
-        else:
-            to_map.append(raw_key)
-            print(f"  '{raw_key}' marked for manual mapping.")
+    if bulk == "s":
+        print("All unmatched fields will be skipped.")
+        return set(unmatched), False
 
-    if to_map:
+    if bulk == "k":
+        print("All unmatched fields kept with raw names.")
+        return set(), False
+
+    if bulk == "a":
         available = _get_standard_fields_for_meter(resolved_yaml_path, meter_type)
         print(f"\nFields to add to standard_field_map.yaml:")
-        for field in to_map:
+        for field in sorted_unmatched:
             print(f"  - {field}")
         print(f"\nFile: {resolved_yaml_path}")
         if available:
@@ -76,6 +75,23 @@ def resolve_unmatched(
                 print(f"  - {sf}")
         print("\nAdd each raw name to the appropriate standard field's 'names:' list.")
         input("Press Enter when done to retry... ")
-        return to_skip, True
+        return set(), True
+
+    # bulk == "1": one-by-one, keep or skip only
+    to_skip: Set[str] = set()
+    for raw_key in sorted_unmatched:
+        print(f"\n  Unmatched: '{raw_key}'")
+        print("    (s) Skip — exclude from output")
+        print("    (k) Keep — use raw name unchanged")
+        while True:
+            choice = input("  Choice [s/k]: ").strip().lower()
+            if choice in ("s", "k"):
+                break
+            print("  Please enter s or k.")
+        if choice == "s":
+            to_skip.add(raw_key)
+            print(f"  '{raw_key}' will be skipped.")
+        else:
+            print(f"  '{raw_key}' kept with raw name.")
 
     return to_skip, False
