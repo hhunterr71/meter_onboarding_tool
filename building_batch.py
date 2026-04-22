@@ -5,6 +5,7 @@ from typing import Dict, Any, List
 import pandas as pd
 
 import bitbox_script as main_script
+from type_matcher import run_type_matcher
 from site_model_editor import (
     load_site_model,
     validate_site_model,
@@ -146,7 +147,7 @@ def run_building_batch() -> None:
 
         updated_points = apply_resolution(updated_points, all_to_skip)
         matched_fields = [k for k in updated_points if k not in all_ignored]
-        print(f"\nMatched Standard Fields:\n{', '.join(matched_fields)}")
+        # print(f"\nMatched Standard Fields:\n{', '.join(matched_fields)}")
 
         confirm = input("\nContinue with these mappings? (y/n): ").strip().lower()
         if confirm != "y":
@@ -174,6 +175,7 @@ def run_building_batch() -> None:
             "field_standard_units": field_standard_units,
             "num_id": num_id,
             "ignored_keys": all_ignored,
+            "meter_type": meter_type,
         })
 
     # Phase 2: Mango YAML (optional, iterative)
@@ -190,11 +192,13 @@ def run_building_batch() -> None:
     for entry in processed:
         print(f"\n--- YAML: {entry['folder']} ---")
 
-        missing_fields = add_missing_points(entry["asset_name"])
-        general_type = main_script.get_general_type()
-        type_name = main_script.get_type_name()
-
         yaml_points = {k: v for k, v in entry["updated_points"].items() if k not in entry["ignored_keys"]}
+        suggested_type, pre_add_fields = run_type_matcher(set(yaml_points.keys()), entry["meter_type"])
+
+        general_type = main_script.get_general_type()
+        type_name = main_script.get_type_name(suggestion=suggested_type)
+
+        missing_fields = add_missing_points(entry["asset_name"], pre_add=pre_add_fields)
         df = build_translation_dataframe(
             yaml_points,
             entry["field_standard_units"],

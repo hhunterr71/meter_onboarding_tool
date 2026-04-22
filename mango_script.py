@@ -7,6 +7,7 @@ import pandas as pd
 import bitbox_script as main_script
 from translation_builder_mango import translation_builder_mango
 from field_map_utils import resolve_unmatched
+from type_matcher import run_type_matcher
 
 
 def validate_json_structure_mango(parsed: Dict[str, Any]) -> bool:
@@ -129,13 +130,19 @@ def run_mango() -> None:
     main_script.confirm_mapping()
     main_script.get_standard_fields(df)
 
+    present_fields = set(df.loc[
+        (df["standardFieldName"] != "") & (df["standardFieldName"] != "IGNORE"),
+        "standardFieldName"
+    ])
+    suggested_type, pre_add_fields = run_type_matcher(present_fields, meter_type)
+
     generalType = main_script.get_general_type()
-    typeName = main_script.get_type_name()
+    typeName = main_script.get_type_name(suggestion=suggested_type)
 
     df["generalType"] = generalType
     df["typeName"] = typeName
 
-    df = main_script.add_missing_fields(df, asset_name, generalType, typeName)
+    df = main_script.add_missing_fields(df, asset_name, generalType, typeName, pre_add=pre_add_fields)
 
     if main_script.confirm_generate_translation():
         building_code = parsed.get("building_code", "")

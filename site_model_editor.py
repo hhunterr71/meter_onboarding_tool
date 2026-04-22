@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from typing import Dict, Any, Tuple, List, Optional, Set
 
 import pandas as pd
@@ -7,6 +8,7 @@ import pandas as pd
 import bitbox_script as main_script
 from translation_builder_mango import translation_builder_mango
 from field_map_utils import resolve_unmatched
+from type_matcher import run_type_matcher
 
 
 def load_site_model(file_path: str) -> Dict[str, Any]:
@@ -91,16 +93,27 @@ def print_review(mapped_summary: List[str], unmatched: List[str], ignored: List[
         print("\nAll points matched successfully.")
 
 
-def add_missing_points(asset_name: str) -> List[str]:
-    user_input = input("\nAre there any missing fields you would like to add? (y/n): ").strip().lower()
+def add_missing_points(asset_name: str, pre_add: Optional[List[str]] = None) -> List[str]:
+    all_missing: List[str] = list(pre_add) if pre_add else []
+
+    if pre_add:
+        print(f"  Pre-adding {len(pre_add)} required placeholder(s): {', '.join(pre_add)}")
+
+    prompt = (
+        "\nAre there any additional missing fields you would like to add? (y/n): "
+        if pre_add else
+        "\nAre there any missing fields you would like to add? (y/n): "
+    )
+    user_input = input(prompt).strip().lower()
     if user_input != "y":
-        return []
+        return all_missing
 
     new_fields_input = input("Enter the missing standardFieldName(s), separated by commas: ").strip()
-    missing_fields = [f.strip() for f in new_fields_input.split(",") if f.strip()]
-    for field in missing_fields:
+    extra = [f.strip() for f in new_fields_input.split(",") if f.strip()]
+    for field in extra:
         print(f"  Added: {field}")
-    return missing_fields
+    all_missing.extend(extra)
+    return all_missing
 
 
 def build_translation_dataframe(
@@ -149,15 +162,40 @@ def save_updated_json(
         print(f"Failed to save file: {e}")
 
 
+def _strip_network_prefix(device_str: str) -> Optional[str]:
+    """
+    Strip leading BACnet network path segments from a device_str to isolate the device name.
+
+    Strips up to two leading segments:
+      1. Network type code: 2-5 uppercase letters  (e.g. DP, UC, IP)
+      2. Channel identifier (optional): uppercase-start word ending in digits (e.g. Comm2, Ch1)
+
+    Examples:
+      'DP_Comm2_PV_Meter'  -> 'PV_Meter'
+      'DP_Comm2_VAV-1'     -> 'VAV-1'
+      'DP_Comm2_MAIN_Meter'-> 'MAIN_Meter'
+    """
+    parts = device_str.split("_")
+    i = 0
+    if i < len(parts) - 1 and re.match(r'^[A-Z]{2,5}$', parts[i]):
+        i += 1
+        if i < len(parts) - 1 and re.match(r'^[A-Z][A-Za-z]*\d+$', parts[i]):
+            i += 1
+    result = "_".join(parts[i:])
+    return result if result else None
+
+
 def extract_asset_name_from_refs(points: Dict[str, Any], meter_type: str) -> Optional[str]:
     """
-    For each point, use the key's underscore count to determine how many trailing
-    ref segments belong to the field name, strip them, then locate the meter-type
-    anchor (e.g. 'EM-') to extract the asset name. Returns the most-voted candidate,
-    or None if no valid candidate is found.
+    For each point, strip trailing field-name segments from the ref, then:
+      Pass 1: look for a '{meter_type}-' anchor (e.g. 'EM-') to extract the device name.
+      Pass 2: if no anchor is found, vote on the most common stripped device_str and
+              strip the BACnet network path prefix to isolate the device name.
+    Returns the most-voted candidate, or None if no refs are present.
     """
     search_prefix = f"{meter_type}-"
     candidates: Dict[str, int] = {}
+    raw_device_strs: Dict[str, int] = {}
 
     for point_key, point_data in points.items():
         ref = point_data.get("ref", "")
@@ -168,14 +206,20 @@ def extract_asset_name_from_refs(points: Dict[str, Any], meter_type: str) -> Opt
         if len(ref_parts) <= num_segments:
             continue
         device_str = "_".join(ref_parts[:-num_segments])
+        raw_device_strs[device_str] = raw_device_strs.get(device_str, 0) + 1
         idx = device_str.find(search_prefix)
         if idx != -1:
             name = device_str[idx:]
             candidates[name] = candidates.get(name, 0) + 1
 
-    if not candidates:
+    if candidates:
+        return max(candidates, key=lambda k: candidates[k])
+
+    if not raw_device_strs:
         return None
-    return max(candidates, key=lambda k: candidates[k])
+
+    best = max(raw_device_strs, key=lambda k: raw_device_strs[k])
+    return _strip_network_prefix(best)
 
 
 def build_yaml_asset_name(raw_name: str, meter_type: str) -> str:
@@ -244,7 +288,7 @@ def run_site_model_editor() -> None:
 
     updated_points = apply_resolution(updated_points, all_to_skip)
     matched_fields = [k for k in updated_points]
-    print(f"\nMatched Standard Fields:\n{', '.join(matched_fields)}")
+    # print(f"\nMatched Standard Fields:\n{', '.join(matched_fields)}")
 
     confirm = input("\nContinue with these mappings? (y/n): ").strip().lower()
     if confirm != "y":
@@ -277,11 +321,13 @@ def run_site_model_editor() -> None:
     if confirm_yaml != "y":
         return
 
-    missing_fields = add_missing_points(asset_name)
-    general_type = main_script.get_general_type()
-    type_name = main_script.get_type_name()
-
     yaml_points = {k: v for k, v in updated_points.items() if k not in all_ignored}
+    suggested_type, pre_add_fields = run_type_matcher(set(yaml_points.keys()), meter_type)
+
+    general_type = main_script.get_general_type()
+    type_name = main_script.get_type_name(suggestion=suggested_type)
+
+    missing_fields = add_missing_points(asset_name, pre_add=pre_add_fields)
     df = build_translation_dataframe(yaml_points, field_standard_units, asset_name, general_type, type_name)
 
     if missing_fields:
