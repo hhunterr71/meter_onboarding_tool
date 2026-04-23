@@ -4,7 +4,7 @@ import uuid
 import yaml
 import os
 
-def translation_builder_mango(df: pd.DataFrame, auto_filename: str = "output", save_dir: str = None, num_id: str = "") -> str:
+def translation_builder_mango(df: pd.DataFrame, auto_filename: str = "output", save_dir: str | None = None, num_id: str = "") -> str:
     yaml_output: Dict[str, Any] = {}
 
     for _, row in df.iterrows():
@@ -16,7 +16,7 @@ def translation_builder_mango(df: pd.DataFrame, auto_filename: str = "output", s
         if not yaml_output:
             yaml_output = {
                 'cloud_device_id': num_id,
-                'asset_name': device,
+                'code': device,
                 'translation': {},
                 'type': f"METERS/{row['typeName']}",
                 'update_mask': ['type', 'translation'],

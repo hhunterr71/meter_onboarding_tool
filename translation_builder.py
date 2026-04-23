@@ -4,7 +4,7 @@ import uuid
 import yaml
 import os
 
-def translation_builder(df: pd.DataFrame, auto_filename: str = "output", save_dir: str = None, num_id: str = "") -> str:
+def translation_builder(df: pd.DataFrame, auto_filename: str = "output", save_dir: str | None = None, num_id: str = "") -> str:
     # Build structured YAML output grouped by device
     yaml_output: Dict[str, Any] = {}
 
@@ -18,7 +18,7 @@ def translation_builder(df: pd.DataFrame, auto_filename: str = "output", save_di
         if not yaml_output:
             yaml_output = {
                 'cloud_device_id': num_id,
-                'asset_name': device,
+                'code': device,
                 'translation': {},
                 'type': f"METERS/{row['typeName']}",
                 'update_mask': ['type', 'translation']
