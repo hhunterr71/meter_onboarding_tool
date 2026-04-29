@@ -167,6 +167,14 @@ def run_building_batch() -> None:
         override = input(f"Asset name: [{suggested}] (press Enter to accept or type a new name): ").strip()
         asset_name = override if override else suggested
         num_id = str(parsed.get("cloud", {}).get("num_id", ""))
+        guid = (
+            parsed.get("system", {})
+            .get("physical_tag", {})
+            .get("asset", {})
+            .get("guid")
+        )
+        if isinstance(guid, str):
+            guid = guid.replace("uuid://", "")
 
         overwrite_json(file_path, parsed, updated_points)
 
@@ -190,7 +198,7 @@ def run_building_batch() -> None:
         yaml_points = {k: v for k, v in updated_points.items() if k not in all_ignored}
         suggested_type, pre_add_fields = run_type_matcher(set(yaml_points.keys()), meter_type)
 
-        general_type = main_script.get_general_type()
+        general_type = "METER"
         type_name = main_script.get_type_name(suggestion=suggested_type)
 
         missing_fields = add_missing_points(asset_name, pre_add=pre_add_fields)
@@ -214,4 +222,4 @@ def run_building_batch() -> None:
 
         site = parsed.get("system", {}).get("location", {}).get("site", "")
         auto_filename = f"{site}_{asset_name}" if site else asset_name
-        translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir, num_id=num_id)
+        translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir, num_id=num_id, guid=guid)
