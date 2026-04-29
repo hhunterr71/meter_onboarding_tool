@@ -218,15 +218,10 @@ def get_general_type() -> str:
     return default_type
 
 def get_type_name(suggestion: Optional[str] = None) -> str:
-    prompt = (
-        f"Please enter the canonical typeName (press Enter to accept '{suggestion}'): "
-        if suggestion else
-        "Please enter the canonical typeName: "
-    )
+    if suggestion:
+        return suggestion
     while True:
-        typeName = input(prompt).strip()
-        if not typeName and suggestion:
-            return suggestion
+        typeName = input("Please enter the canonical typeName: ").strip()
         if typeName:
             return typeName
         print("Input cannot be empty. Please try again.")
@@ -238,13 +233,17 @@ def add_missing_fields(df: pd.DataFrame, asset_name: str, generalType: str, type
         print(f"  Pre-adding {len(pre_add)} required placeholder(s): {', '.join(pre_add)}")
 
     prompt = (
-        "Are there any additional missing fields you would like to add? (y/n): "
+        "Are there any additional missing fields you would like to add? (Enter=No, 2=Yes): "
         if pre_add else
-        "Are there any missing fields you would like to add? (y/n): "
+        "Are there any missing fields you would like to add? (Enter=No, 2=Yes): "
     )
-    user_input = input(prompt).strip().lower()
+    while True:
+        user_input = input(prompt).strip()
+        if user_input in ("", "2"):
+            break
+        print("Invalid input. Press Enter for No or 2 for Yes.")
 
-    if user_input == "y":
+    if user_input == "2":
         new_fields_input = input("Enter the MISSING standardFieldName(s), separated by commas: ").strip().lower()
         extra = [field.strip() for field in new_fields_input.split(",") if field.strip()]
         print(f"🆕 You entered: {extra}")

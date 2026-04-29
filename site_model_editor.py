@@ -100,12 +100,16 @@ def add_missing_points(asset_name: str, pre_add: Optional[List[str]] = None) -> 
         print(f"  Pre-adding {len(pre_add)} required placeholder(s): {', '.join(pre_add)}")
 
     prompt = (
-        "\nAre there any additional missing fields you would like to add? (y/n): "
+        "\nAre there any additional missing fields you would like to add? (Enter=No, 2=Yes): "
         if pre_add else
-        "\nAre there any missing fields you would like to add? (y/n): "
+        "\nAre there any missing fields you would like to add? (Enter=No, 2=Yes): "
     )
-    user_input = input(prompt).strip().lower()
-    if user_input != "y":
+    while True:
+        user_input = input(prompt).strip()
+        if user_input in ("", "2"):
+            break
+        print("Invalid input. Press Enter for No or 2 for Yes.")
+    if user_input != "2":
         return all_missing
 
     new_fields_input = input("Enter the missing standardFieldName(s), separated by commas: ").strip()

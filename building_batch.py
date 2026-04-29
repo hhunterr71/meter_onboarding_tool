@@ -115,11 +115,21 @@ def run_building_batch() -> None:
             print(f"Skipping {folder}.")
             continue
 
-        skip_prompt = input("Would you like to skip this meter? y/n: ")
-        if skip_prompt.lower() == "y":
+        while True:
+            skip_prompt = input("Skip or process this meter? (Enter=Process, 2=Skip): ").strip()
+            if skip_prompt in ("", "2"):
+                break
+            print("Invalid input. Press Enter to process or 2 to skip.")
+        if skip_prompt == "2":
             continue
 
-        meter_type = input("Enter meter type (EM, WM, GM): ").strip().upper()
+        meter_type_map = {"1": "EM", "2": "WM", "3": "GM"}
+        while True:
+            mt_prompt = input("Enter meter type (1=EM, 2=WM, 3=GM): ").strip()
+            if mt_prompt in meter_type_map:
+                meter_type = meter_type_map[mt_prompt]
+                break
+            print("Invalid input. Enter 1, 2, or 3.")
         try:
             ci_field_map = build_case_insensitive_field_map(meter_type)
             field_dbo_units = main_script.load_field_dbo_units(meter_type)
@@ -151,8 +161,8 @@ def run_building_batch() -> None:
 
         updated_points = apply_resolution(updated_points, all_to_skip)
 
-        confirm = input("\nContinue with these mappings? (y/n): ").strip().lower()
-        if confirm != "y":
+        confirm = input("\nContinue with these mappings? (Enter=Yes, 2=Skip): ").strip()
+        if confirm == "2":
             print("Skipping.")
             continue
 
@@ -179,8 +189,8 @@ def run_building_batch() -> None:
         overwrite_json(file_path, parsed, updated_points)
 
         # YAML generation for this device
-        confirm_yaml = input("\nGenerate mango YAML for this device? (y/n): ").strip().lower()
-        if confirm_yaml != "y":
+        confirm_yaml = input("\nGenerate mango YAML for this device? (Enter=Yes, 2=Skip): ").strip()
+        if confirm_yaml == "2":
             continue
 
         if save_dir:

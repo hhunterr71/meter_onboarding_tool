@@ -130,11 +130,11 @@ def run_type_matcher(
         for f in selected.missing_required:
             print(f"    - {f}")
         while True:
-            ans = input("  Add these as MISSING placeholders in the YAML? (y/n): ").strip().lower()
-            if ans in ("y", "n"):
+            ans = input("  Add these as MISSING placeholders in the YAML? (Enter=No, 2=Yes): ").strip()
+            if ans in ("", "2"):
                 break
-            print("  Please enter y or n.")
-        if ans == "y":
+            print("  Invalid input. Press Enter for No or 2 for Yes.")
+        if ans == "2":
             pre_add = selected.missing_required[:]
             print(f"  {len(pre_add)} placeholder(s) will be added.")
 
