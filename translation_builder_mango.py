@@ -4,7 +4,7 @@ import uuid
 import yaml
 import os
 
-def translation_builder_mango(df: pd.DataFrame, auto_filename: str = "output", save_dir: str | None = None, num_id: str = "") -> str:
+def translation_builder_mango(df: pd.DataFrame, auto_filename: str = "output", save_dir: str | None = None, num_id: str = "", guid: str | None = None) -> str:
     yaml_output: Dict[str, Any] = {}
 
     for _, row in df.iterrows():
@@ -38,7 +38,7 @@ def translation_builder_mango(df: pd.DataFrame, auto_filename: str = "output", s
                     }
                 }
 
-    guid = str(uuid.uuid4())
+    guid = guid or str(uuid.uuid4())
     yaml_string = yaml.dump({guid: yaml_output}, sort_keys=False)
 
     if save_dir is None:
