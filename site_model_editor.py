@@ -5,10 +5,9 @@ from typing import Dict, Any, Tuple, List, Optional, Set
 
 import pandas as pd
 
-import bitbox_script as main_script
-from translation_builder_mango import translation_builder_mango
-from field_map_utils import resolve_unmatched
-from type_matcher import run_type_matcher
+from translation_builder_udmi import translation_builder_udmi
+from field_map_utils import load_field_mapping, load_field_dbo_units, load_field_standard_units, resolve_unmatched
+from type_matcher import run_type_matcher, get_type_name
 
 
 def load_site_model(file_path: str) -> Dict[str, Any]:
@@ -28,7 +27,7 @@ def validate_site_model(parsed: Dict[str, Any]) -> bool:
 
 def build_case_insensitive_field_map(meter_type: str) -> Dict[str, str]:
     """Load field map and return {raw_name_lower: standard_field_name}."""
-    field_map = main_script.load_field_mapping(meter_type)
+    field_map = load_field_mapping(meter_type)
     return {k.lower(): v for k, v in field_map.items()}
 
 
@@ -263,8 +262,8 @@ def run_site_model_editor() -> None:
     meter_type = input("Enter meter type (EM, WM, GM): ").strip().upper()
     try:
         ci_field_map = build_case_insensitive_field_map(meter_type)
-        field_dbo_units = main_script.load_field_dbo_units(meter_type)
-        field_standard_units = main_script.load_field_standard_units(meter_type)
+        field_dbo_units = load_field_dbo_units(meter_type)
+        field_standard_units = load_field_standard_units(meter_type)
     except ValueError as e:
         print(e)
         return
@@ -294,8 +293,8 @@ def run_site_model_editor() -> None:
     matched_fields = [k for k in updated_points]
     # print(f"\nMatched Standard Fields:\n{', '.join(matched_fields)}")
 
-    confirm = input("\nContinue with these mappings? (y/n): ").strip().lower()
-    if confirm != "y":
+    confirm = input("\nContinue with these mappings? (Enter=Yes, 2=Skip): ").strip()
+    if confirm == "2":
         print("Cancelled.")
         return
 
@@ -319,17 +318,17 @@ def run_site_model_editor() -> None:
 
     save_updated_json(parsed, updated_points, auto_filename, save_dir)
 
-    # --- Phase 2: Generate mango YAML ---
+    # --- Phase 2: Generate UDMI YAML ---
 
-    confirm_yaml = input("\nGenerate mango YAML for this device? (y/n): ").strip().lower()
-    if confirm_yaml != "y":
+    confirm_yaml = input("\nGenerate UDMI YAML for this device? (Enter=Yes, 2=Skip): ").strip()
+    if confirm_yaml == "2":
         return
 
     yaml_points = {k: v for k, v in updated_points.items() if k not in all_ignored}
     suggested_type, pre_add_fields = run_type_matcher(set(yaml_points.keys()), meter_type)
 
-    general_type = main_script.get_general_type()
-    type_name = main_script.get_type_name(suggestion=suggested_type)
+    general_type = input("Please enter the generalType (default: METER): ").strip() or "METER"
+    type_name = get_type_name(suggestion=suggested_type)
 
     missing_fields = add_missing_points(asset_name, pre_add=pre_add_fields)
     df = build_translation_dataframe(yaml_points, field_standard_units, asset_name, general_type, type_name)
@@ -346,4 +345,4 @@ def run_site_model_editor() -> None:
         } for field in missing_fields])
         df = pd.concat([df, missing_rows], ignore_index=True)
 
-    translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir, num_id=num_id)
+    translation_builder_udmi(df, auto_filename=auto_filename, save_dir=save_dir, num_id=num_id)

@@ -29,5 +29,5 @@ logs/
 *.coverage
 
 # Generated tool outputs
-*_mango.yaml
+*_udmi.yaml
 *_sitejson.json

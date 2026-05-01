@@ -4,6 +4,17 @@ import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple
 
+
+def get_type_name(suggestion: Optional[str] = None) -> str:
+    """Prompt the user for a canonical type name, defaulting to the suggestion."""
+    if suggestion:
+        return suggestion
+    while True:
+        type_name = input("Please enter the canonical typeName: ").strip()
+        if type_name:
+            return type_name
+        print("Input cannot be empty. Please try again.")
+
 import yaml
 
 _TYPE_MAP_FILE = os.path.join(
@@ -130,11 +141,11 @@ def run_type_matcher(
         for f in selected.missing_required:
             print(f"    - {f}")
         while True:
-            ans = input("  Add these as MISSING placeholders in the YAML? (Enter=No, 2=Yes): ").strip()
+            ans = input("  Add these as MISSING placeholders in the YAML? (Enter=Yes, 2=No): ").strip()
             if ans in ("", "2"):
                 break
-            print("  Invalid input. Press Enter for No or 2 for Yes.")
-        if ans == "2":
+            print("  Invalid input. Press Enter for Yes or 2 for No.")
+        if ans != "2":
             pre_add = selected.missing_required[:]
             print(f"  {len(pre_add)} placeholder(s) will be added.")
 

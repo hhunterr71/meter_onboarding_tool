@@ -4,8 +4,8 @@ from typing import Dict, Any, List
 
 import pandas as pd
 
-import bitbox_script as main_script
-from type_matcher import run_type_matcher
+from field_map_utils import _load_field_map_yaml, load_field_dbo_units, load_field_standard_units
+from type_matcher import run_type_matcher, get_type_name
 from site_model_editor import (
     load_site_model,
     validate_site_model,
@@ -19,7 +19,7 @@ from site_model_editor import (
     build_yaml_asset_name,
 )
 from field_map_utils import resolve_unmatched
-from translation_builder_mango import translation_builder_mango
+from translation_builder_udmi import translation_builder_udmi
 
 
 METER_PREFIXES = ("EM-", "GM-", "WM-", "PVI-", "EMV-")
@@ -77,7 +77,7 @@ def run_building_batch() -> None:
 
     # Validate field map YAML before doing any work
     try:
-        main_script._load_field_map_yaml()
+        _load_field_map_yaml()
     except (FileNotFoundError, ValueError, IOError) as e:
         print(f"\nField map YAML error — please fix before running:\n  {e}")
         return
@@ -132,8 +132,8 @@ def run_building_batch() -> None:
             print("Invalid input. Enter 1, 2, or 3.")
         try:
             ci_field_map = build_case_insensitive_field_map(meter_type)
-            field_dbo_units = main_script.load_field_dbo_units(meter_type)
-            field_standard_units = main_script.load_field_standard_units(meter_type)
+            field_dbo_units = load_field_dbo_units(meter_type)
+            field_standard_units = load_field_standard_units(meter_type)
         except ValueError as e:
             print(e)
             print(f"Skipping {folder}.")
@@ -189,7 +189,7 @@ def run_building_batch() -> None:
         overwrite_json(file_path, parsed, updated_points)
 
         # YAML generation for this device
-        confirm_yaml = input("\nGenerate mango YAML for this device? (Enter=Yes, 2=Skip): ").strip()
+        confirm_yaml = input("\nGenerate UDMI YAML for this device? (Enter=Yes, 2=Skip): ").strip()
         if confirm_yaml == "2":
             continue
 
@@ -209,7 +209,7 @@ def run_building_batch() -> None:
         suggested_type, pre_add_fields = run_type_matcher(set(yaml_points.keys()), meter_type)
 
         general_type = "METER"
-        type_name = main_script.get_type_name(suggestion=suggested_type)
+        type_name = get_type_name(suggestion=suggested_type)
 
         missing_fields = add_missing_points(asset_name, pre_add=pre_add_fields)
         df = build_translation_dataframe(
@@ -232,4 +232,4 @@ def run_building_batch() -> None:
 
         site = parsed.get("system", {}).get("location", {}).get("site", "")
         auto_filename = f"{site}_{asset_name}" if site else asset_name
-        translation_builder_mango(df, auto_filename=auto_filename, save_dir=save_dir, num_id=num_id, guid=guid)
+        translation_builder_udmi(df, auto_filename=auto_filename, save_dir=save_dir, num_id=num_id, guid=guid)
