@@ -157,8 +157,12 @@ def run_building_config_updater() -> None:
         out_filename = f"{site_code}_{meter_code}_add.yaml"
         out_path = os.path.join(output_dir, out_filename)
         try:
+            parts = [
+                yaml.dump({k: v}, sort_keys=False, default_flow_style=False)
+                for k, v in output.items()
+            ]
             with open(out_path, "w", encoding="utf-8") as fh:
-                yaml.dump(output, fh, sort_keys=False, default_flow_style=False)
+                fh.write("\n".join(parts))
             print(f"  Written: {out_path}")
             results["written"].append(out_filename)
         except Exception as e:
