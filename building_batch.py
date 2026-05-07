@@ -2,10 +2,7 @@ import json
 import os
 from typing import Dict, Any, List
 
-import pandas as pd
-
-from field_map_utils import _load_field_map_yaml, load_field_dbo_units, load_field_standard_units
-from type_matcher import run_type_matcher, get_type_name
+from field_map_utils import _load_field_map_yaml, load_field_dbo_units
 from site_model_editor import (
     load_site_model,
     validate_site_model,
@@ -13,13 +10,8 @@ from site_model_editor import (
     process_points,
     print_review,
     apply_resolution,
-    build_translation_dataframe,
-    add_missing_points,
-    extract_asset_name_from_refs,
-    build_yaml_asset_name,
 )
 from field_map_utils import resolve_unmatched
-from translation_builder_udmi import translation_builder_udmi
 
 
 METER_PREFIXES = ("EM-", "GM-", "WM-", "PVI-", "EMV-")
@@ -94,9 +86,8 @@ def run_building_batch() -> None:
         return
 
     selected = select_devices(folders)
-    save_dir: str = ""
 
-    # Process each device end-to-end (JSON then YAML) before moving to the next
+    # Process each device end-to-end before moving to the next
     for folder in selected:
         file_path = os.path.join(devices_dir, folder, "metadata.json")
         print(f"\n--- Processing: {folder} ---")
@@ -133,7 +124,6 @@ def run_building_batch() -> None:
         try:
             ci_field_map = build_case_insensitive_field_map(meter_type)
             field_dbo_units = load_field_dbo_units(meter_type)
-            field_standard_units = load_field_standard_units(meter_type)
         except ValueError as e:
             print(e)
             print(f"Skipping {folder}.")
@@ -166,70 +156,4 @@ def run_building_batch() -> None:
             print("Skipping.")
             continue
 
-        raw_name = extract_asset_name_from_refs(points, meter_type)
-        if raw_name is None:
-            raw_name = parsed.get("system", {}).get("name", "UNKNOWN")
-            print(f"  Could not extract asset name from refs, falling back to: {raw_name}")
-        suggested = build_yaml_asset_name(raw_name, meter_type)
-        sample_ref = next((p.get("ref") for p in points.values() if p.get("ref")), None)
-        if sample_ref:
-            print(f"Sample ref: {sample_ref}")
-        override = input(f"Asset name: [{suggested}] (press Enter to accept or type a new name): ").strip()
-        asset_name = override if override else suggested
-        num_id = str(parsed.get("cloud", {}).get("num_id", ""))
-        guid = (
-            parsed.get("system", {})
-            .get("physical_tag", {})
-            .get("asset", {})
-            .get("guid")
-        )
-        if isinstance(guid, str):
-            guid = guid.replace("uuid://", "")
-
         overwrite_json(file_path, parsed, updated_points)
-
-        # YAML generation for this device
-        confirm_yaml = input("\nGenerate UDMI YAML for this device? (Enter=Yes, 2=Skip): ").strip()
-        if confirm_yaml == "2":
-            continue
-
-        if save_dir:
-            dir_prompt = f"Enter output directory for YAML [{save_dir}]: "
-        else:
-            dir_prompt = "Enter output directory for YAML: "
-        dir_input = input(dir_prompt).strip().strip('"').strip("'")
-        if dir_input:
-            save_dir = dir_input
-
-        if not save_dir:
-            print("No output directory provided, skipping YAML.")
-            continue
-
-        yaml_points = {k: v for k, v in updated_points.items() if k not in all_ignored}
-        suggested_type, pre_add_fields = run_type_matcher(set(yaml_points.keys()), meter_type)
-
-        general_type = "METER"
-        type_name = get_type_name(suggestion=suggested_type)
-
-        missing_fields = add_missing_points(asset_name, pre_add=pre_add_fields)
-        df = build_translation_dataframe(
-            yaml_points,
-            field_standard_units,
-            asset_name, general_type, type_name,
-        )
-
-        if missing_fields:
-            missing_rows = pd.DataFrame([{
-                "assetName": asset_name,
-                "object_name": "MISSING",
-                "standardFieldName": field,
-                "raw_units": "MISSING",
-                "DBO_standard_units": "MISSING",
-                "generalType": general_type,
-                "typeName": type_name,
-            } for field in missing_fields])
-            df = pd.concat([df, missing_rows], ignore_index=True)
-
-        site = parsed.get("system", {}).get("location", {}).get("site", "")
-        auto_filename = f"{site}_{asset_name}" if site else asset_name
-        translation_builder_udmi(df, auto_filename=auto_filename, save_dir=save_dir, num_id=num_id, guid=guid)

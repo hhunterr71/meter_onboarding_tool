@@ -5,9 +5,7 @@ from typing import Dict, Any, Tuple, List, Optional, Set
 
 import pandas as pd
 
-from translation_builder_udmi import translation_builder_udmi
-from field_map_utils import load_field_mapping, load_field_dbo_units, load_field_standard_units, resolve_unmatched
-from type_matcher import run_type_matcher, get_type_name
+from field_map_utils import load_field_mapping, load_field_dbo_units, resolve_unmatched
 
 
 def load_site_model(file_path: str) -> Dict[str, Any]:
@@ -263,7 +261,6 @@ def run_site_model_editor() -> None:
     try:
         ci_field_map = build_case_insensitive_field_map(meter_type)
         field_dbo_units = load_field_dbo_units(meter_type)
-        field_standard_units = load_field_standard_units(meter_type)
     except ValueError as e:
         print(e)
         return
@@ -317,32 +314,3 @@ def run_site_model_editor() -> None:
     save_dir = dir_input if dir_input else default_dir
 
     save_updated_json(parsed, updated_points, auto_filename, save_dir)
-
-    # --- Phase 2: Generate UDMI YAML ---
-
-    confirm_yaml = input("\nGenerate UDMI YAML for this device? (Enter=Yes, 2=Skip): ").strip()
-    if confirm_yaml == "2":
-        return
-
-    yaml_points = {k: v for k, v in updated_points.items() if k not in all_ignored}
-    suggested_type, pre_add_fields = run_type_matcher(set(yaml_points.keys()), meter_type)
-
-    general_type = input("Please enter the generalType (default: METER): ").strip() or "METER"
-    type_name = get_type_name(suggestion=suggested_type)
-
-    missing_fields = add_missing_points(asset_name, pre_add=pre_add_fields)
-    df = build_translation_dataframe(yaml_points, field_standard_units, asset_name, general_type, type_name)
-
-    if missing_fields:
-        missing_rows = pd.DataFrame([{
-            "assetName": asset_name,
-            "object_name": "MISSING",
-            "standardFieldName": field,
-            "raw_units": "MISSING",
-            "DBO_standard_units": "MISSING",
-            "generalType": general_type,
-            "typeName": type_name,
-        } for field in missing_fields])
-        df = pd.concat([df, missing_rows], ignore_index=True)
-
-    translation_builder_udmi(df, auto_filename=auto_filename, save_dir=save_dir, num_id=num_id)

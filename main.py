@@ -2,6 +2,8 @@ import udmi_script
 import site_model_editor
 import building_batch
 import yaml_batch_builder
+import export_building_config
+import building_config_updater
 
 def show_menu() -> str:
     print("\n=== Meter Onboard Tool ===")
@@ -9,11 +11,13 @@ def show_menu() -> str:
     print("2. Single JSON Site Model Editor (single json input)")
     print("3. Batch Site Model Editor (full site model input)")
     print("4. Batch YAML Export (already-processed site model input)")
+    print("5. Export Building Configs")
+    print("6. Building Config Updater")
     while True:
-        choice = input("Select an option (1-4): ").strip()
-        if choice in ("1", "2", "3", "4"):
+        choice = input("Select an option (1-6): ").strip()
+        if choice in ("1", "2", "3", "4", "5", "6"):
             return choice
-        print("Invalid selection. Please enter 1, 2, 3, or 4.")
+        print("Invalid selection. Please enter 1, 2, 3, 4, 5, or 6.")
 
 def run_loop() -> None:
     while True:
@@ -26,6 +30,10 @@ def run_loop() -> None:
             building_batch.run_building_batch()
         elif choice == "4":
             yaml_batch_builder.run_yaml_batch_builder()
+        elif choice == "5":
+            export_building_config.run_export_batch()
+        elif choice == "6":
+            building_config_updater.run_building_config_updater()
 
         again = input("\nRun again? (y/n): ").strip().lower()
         if again != "y":
