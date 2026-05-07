@@ -117,7 +117,6 @@ def run_building_config_updater() -> None:
         meter_guid = next(iter(udmi_data))
         meter_data = udmi_data[meter_guid]
         meter_code = meter_data.get("code", "")
-        cloud_device_id = str(meter_data.get("cloud_device_id", ""))
 
         if not meter_code:
             print(f"  No 'code' field found in UDMI YAML, skipping.")
@@ -139,6 +138,10 @@ def run_building_config_updater() -> None:
 
         building_guid, building_data = building_entity
 
+        # Build meter entry: operation: ADD prepended to the full UDMI entity
+        meter_entry = {"operation": "ADD"}
+        meter_entry.update(meter_data)
+
         # Build output dict (key insertion order is preserved)
         output = {
             "CONFIG_METADATA": {"operation": "UPDATE"},
@@ -147,11 +150,7 @@ def run_building_config_updater() -> None:
                 "etag": building_data.get("etag", ""),
                 "type": "FACILITIES/BUILDING",
             },
-            meter_guid: {
-                "operation": "ADD",
-                "cloud_device_id": cloud_device_id,
-                "code": meter_code,
-            },
+            meter_guid: meter_entry,
         }
 
         # Write output file
