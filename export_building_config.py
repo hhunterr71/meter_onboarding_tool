@@ -3,7 +3,6 @@ import re
 import os
 import sys
 import time
-import json
 
 
 def export_building_config(building_code, outfile_path):
@@ -105,26 +104,20 @@ def export_building_config(building_code, outfile_path):
     raise RuntimeError("Export did not complete successfully (still running after 3 attempts).")
 
 
-def _collect_building_codes_from_dir(building_dir: str) -> list:
-    """Scan udmi/devices/*/metadata.json files and return unique building codes from system.location.site."""
-    devices_dir = os.path.join(building_dir, "udmi", "devices")
-    if not os.path.isdir(devices_dir):
-        print(f"No udmi/devices directory found under: {building_dir}")
-        return []
-
+def _collect_building_codes_from_dir(project_dir: str) -> list:
+    """Scan *_udmi.yaml filenames in project_dir and return unique site codes."""
     codes = set()
-    for device_name in os.listdir(devices_dir):
-        metadata_path = os.path.join(devices_dir, device_name, "metadata.json")
-        if not os.path.isfile(metadata_path):
+    for filename in os.listdir(project_dir):
+        if not filename.endswith("_udmi.yaml"):
             continue
-        try:
-            with open(metadata_path, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
-            site = data.get("system", {}).get("location", {}).get("site", "")
-            if site:
-                codes.add(site)
-        except Exception as e:
-            print(f"  Warning: could not read {metadata_path}: {e}")
+        match = re.match(r"^(US-[A-Z]+-[A-Z0-9]+)_", filename)
+        if match:
+            codes.add(match.group(1))
+        else:
+            print(f"  Warning: could not extract site code from '{filename}', skipping.")
+
+    if not codes:
+        print("No *_udmi.yaml files with a recognizable site code found.")
 
     return sorted(codes)
 
@@ -132,7 +125,7 @@ def _collect_building_codes_from_dir(building_dir: str) -> list:
 def run_export_batch() -> None:
     """Option 5: export building configs for one or more buildings."""
     raw = input(
-        "Enter a building code (US-XXX-YYY) or a path to a UDMI building directory: "
+        "Enter a building code (US-XXX-YYY) or a path to a project directory containing UDMI YAML files: "
     ).strip().strip('"').strip("'")
 
     if not raw:
@@ -145,7 +138,7 @@ def run_export_batch() -> None:
         print(f"Directory detected — scanning for building codes in {building_dir} ...")
         building_codes = _collect_building_codes_from_dir(building_dir)
         if not building_codes:
-            print("No building codes found in metadata files.")
+            print("No building codes found in UDMI YAML filenames.")
             return
         print(f"\nFound {len(building_codes)} unique building code(s):")
         for code in building_codes:
