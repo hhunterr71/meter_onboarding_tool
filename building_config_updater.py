@@ -30,19 +30,24 @@ def _find_meter_entity_by_code(meter_code: str, building_config: dict) -> tuple[
     return None
 
 
-def run_building_config_updater() -> None:
-    """Option 6: generate ADD update YAMLs for meters not yet in their building config."""
-    while True:
-        raw = input(
-            "Enter the directory containing UDMI YAML files and full_building_configs/ folder: "
-        ).strip().strip('"').strip("'")
-        if not raw:
-            print("No input provided.")
+def run_building_config_updater(input_dir: str | None = None) -> None:
+    """Option 6: generate ADD/UPDATE YAMLs comparing UDMI files against building configs."""
+    if input_dir is not None:
+        if not os.path.isdir(input_dir):
+            print(f"Provided directory not found: '{input_dir}'")
             return
-        if os.path.isdir(raw):
-            input_dir = raw
-            break
-        print(f"Directory not found: '{raw}'")
+    else:
+        while True:
+            raw = input(
+                "Enter the directory containing UDMI YAML files and full_building_configs/ folder: "
+            ).strip().strip('"').strip("'")
+            if not raw:
+                print("No input provided.")
+                return
+            if os.path.isdir(raw):
+                input_dir = raw
+                break
+            print(f"Directory not found: '{raw}'")
 
     building_configs_dir = os.path.join(input_dir, "full_building_configs")
     if not os.path.isdir(building_configs_dir):

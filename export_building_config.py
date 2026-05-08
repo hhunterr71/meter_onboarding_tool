@@ -122,7 +122,7 @@ def _collect_building_codes_from_dir(project_dir: str) -> list:
     return sorted(codes)
 
 
-def run_export_batch() -> None:
+def run_export_batch() -> str | None:
     """Option 5: export building configs for one or more buildings."""
     raw = input(
         "Enter a building code (US-XXX-YYY) or a path to a project directory containing UDMI YAML files: "
@@ -130,7 +130,7 @@ def run_export_batch() -> None:
 
     if not raw:
         print("No input provided.")
-        return
+        return None
 
     # Determine mode: directory or building code
     if os.path.isdir(raw):
@@ -139,12 +139,13 @@ def run_export_batch() -> None:
         building_codes = _collect_building_codes_from_dir(building_dir)
         if not building_codes:
             print("No building codes found in UDMI YAML filenames.")
-            return
+            return None
         print(f"\nFound {len(building_codes)} unique building code(s):")
         for code in building_codes:
             print(f"  {code}")
         output_root = os.path.join(building_dir, "full_building_configs")
     else:
+        building_dir = None
         building_codes = [raw]
         output_root = os.path.join(os.getcwd(), "full_building_configs")
 
@@ -173,6 +174,8 @@ def run_export_batch() -> None:
         print(f"  Failed:     {len(results['failed'])}")
         for code in results["failed"]:
             print(f"    {code}")
+
+    return building_dir
 
 
 def clean_export_file(outfile_path):

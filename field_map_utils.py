@@ -75,11 +75,17 @@ def load_field_mapping(meter_type: str, yaml_file: Optional[str] = None) -> Dict
     """Return {object_name: standard_field_name} for the given meter type."""
     all_mappings = _load_field_map_yaml(yaml_file)
     _validate_meter_type(all_mappings, meter_type)
-    return {
+    result = {
         object_name: standard_field
         for standard_field, field_data in all_mappings[meter_type].items()
         for object_name in (field_data.get("names") or [])
     }
+    # Also map each standard field name to itself so already-processed points
+    # still have their units corrected on a second run.
+    for standard_field in all_mappings[meter_type]:
+        if standard_field != "IGNORE":
+            result[standard_field.lower()] = standard_field
+    return result
 
 
 def load_field_dbo_units(meter_type: str, yaml_file: Optional[str] = None) -> Dict[str, str]:
