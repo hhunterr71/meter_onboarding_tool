@@ -3,7 +3,9 @@ import pandas as pd
 import yaml
 import os
 
-def translation_builder_udmi(df: pd.DataFrame, auto_filename: str = "output", save_dir: str | None = None, num_id: str = "", guid: str | None = None) -> str:
+
+def build_udmi_dict(df: pd.DataFrame, num_id: str = "", guid: str | None = None) -> Dict[str, Any]:
+    """Build and return {guid: meter_data} without saving to disk."""
     yaml_output: Dict[str, Any] = {}
 
     for _, row in df.iterrows():
@@ -38,7 +40,12 @@ def translation_builder_udmi(df: pd.DataFrame, auto_filename: str = "output", sa
                 }
 
     guid = guid if guid is not None else ""
-    yaml_string = yaml.dump({guid: yaml_output}, sort_keys=False)
+    return {guid: yaml_output}
+
+
+def translation_builder_udmi(df: pd.DataFrame, auto_filename: str = "output", save_dir: str | None = None, num_id: str = "", guid: str | None = None) -> str:
+    data = build_udmi_dict(df, num_id=num_id, guid=guid)
+    yaml_string = yaml.dump(data, sort_keys=False)
 
     if not save_dir:
         print("No directory provided. Skipping save.")

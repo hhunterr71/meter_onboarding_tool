@@ -12,7 +12,9 @@ from site_model_editor import (
     build_yaml_asset_name,
 )
 from type_matcher import run_type_matcher, get_type_name
-from translation_builder_udmi import translation_builder_udmi
+from translation_builder_udmi import build_udmi_dict
+from export_building_config import export_building_config
+from building_config_updater import run_building_config_updater_from_data
 
 
 def _detect_meter_type(folder_name: str) -> str:
@@ -52,7 +54,51 @@ def run_yaml_batch_builder() -> None:
         return
 
     selected = select_devices(folders)
-    save_dir: str = ""
+    if not selected:
+        return
+
+    # 3. Ask for output directory upfront
+    while True:
+        output_dir = input("Enter output directory for generated files: ").strip().strip('"').strip("'")
+        if output_dir:
+            break
+        print("Output directory is required.")
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 4. Pre-scan selected devices to collect unique site codes
+    site_codes: set[str] = set()
+    for folder in selected:
+        meta_path = os.path.join(devices_dir, folder, "metadata.json")
+        if not os.path.isfile(meta_path):
+            continue
+        try:
+            parsed = load_site_model(meta_path)
+            site = parsed.get("system", {}).get("location", {}).get("site", "")
+            if site:
+                site_codes.add(site)
+        except Exception:
+            pass
+
+    # 5. Export building configs before the device processing loop
+    bc_dir = os.path.join(output_dir, "full_building_configs")
+    os.makedirs(bc_dir, exist_ok=True)
+
+    if site_codes:
+        print(f"\nExporting building configs for {len(site_codes)} site(s)...")
+        for code in sorted(site_codes):
+            outfile = os.path.join(bc_dir, f"{code}_full_building_config.yaml")
+            print(f"--- Exporting: {code} ---")
+            try:
+                export_building_config(code, outfile)
+                print(f"  Saved: {outfile}")
+            except RuntimeError as e:
+                print(f"  Warning: failed to export config for {code}: {e}")
+    else:
+        print("\nWarning: no site codes found in selected device metadata. Building config export skipped.")
+
+    # 6. Process each device — collect meter data in memory
+    meter_entries: list[dict] = []
+    updates_dir = os.path.join(output_dir, "building_config_updates")
 
     for folder in selected:
         file_path = os.path.join(devices_dir, folder, "metadata.json")
@@ -159,21 +205,25 @@ def run_yaml_batch_builder() -> None:
             } for field in missing_fields])
             df = pd.concat([df, missing_rows], ignore_index=True)
 
-        # Output directory (remembered across devices)
-        if save_dir:
-            dir_prompt = f"Enter output directory for YAML [{save_dir}]: "
-        else:
-            dir_prompt = "Enter output directory for YAML: "
-        dir_input = input(dir_prompt).strip().strip('"').strip("'")
-        if dir_input:
-            save_dir = dir_input
-
-        if not save_dir:
-            print("No output directory provided, skipping YAML.")
-            continue
-
+        # Build meter data dict in memory — no file written
         site = parsed.get("system", {}).get("location", {}).get("site", "")
-        auto_filename = f"{site}_{asset_name}" if site else asset_name
-        translation_builder_udmi(
-            df, auto_filename=auto_filename, save_dir=save_dir, num_id=num_id, guid=guid
-        )
+        udmi_dict = build_udmi_dict(df, num_id=num_id, guid=guid)
+        guid_key = guid if guid is not None else ""
+        meter_data = udmi_dict.get(guid_key, next(iter(udmi_dict.values()), {}))
+
+        if not site:
+            print(f"  Warning: no site code in metadata for {folder}.")
+
+        meter_entries.append({
+            "guid": guid_key,
+            "data": meter_data,
+            "site_code": site,
+        })
+        print(f"  Collected: {asset_name} ({site or 'no site code'})")
+
+    # 7. Generate ADD/UPDATE files from collected meter data
+    if meter_entries:
+        print(f"\nGenerating ADD/UPDATE files for {len(meter_entries)} meter(s)...")
+        run_building_config_updater_from_data(meter_entries, bc_dir, updates_dir)
+    else:
+        print("\nNo meter data collected.")
