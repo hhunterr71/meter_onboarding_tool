@@ -42,9 +42,14 @@ def run_onboard_and_get_status(building_code, topology_file_path, result_file_pa
         return False
 
     onboard_combined = (onboard_result.stdout or "") + "\n" + (onboard_result.stderr or "")
-    match = re.search(r'name:\s*["\']([^"\']+)["\']', onboard_combined)
+    # Try quoted (single/double/backtick) first, then unquoted proto path
+    match = re.search(r'name:\s*["\'\`]([^"\'`\n]+)["\'\`]', onboard_combined)
     if not match:
-        print("Failed to extract operation name from OnboardBuilding output")
+        match = re.search(r'name:\s*(projects/\S+)', onboard_combined)
+    if not match:
+        print("Failed to extract operation name from OnboardBuilding output.")
+        print("Raw OnboardBuilding output:")
+        print(onboard_combined.strip()[:1000] or "(empty)")
         print("\a")
         return False
 

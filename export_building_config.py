@@ -52,9 +52,15 @@ def export_building_config(building_code, outfile_path):
     # ----------------------------
     # Extract operation_name
     # ----------------------------
-    match = re.search(r"name:\s*['\"]([^'\"]+)['\"]", combined_out)
+    # Try quoted (single/double/backtick) first, then unquoted proto path
+    match = re.search(r"name:\s*[\"'\`]([^\"'`\n]+)[\"'\`]", combined_out)
     if not match:
-        raise RuntimeError("Failed to extract operation_name from ExportBuildingConfig output")
+        match = re.search(r"name:\s*(projects/\S+)", combined_out)
+    if not match:
+        raise RuntimeError(
+            "Failed to extract operation_name from ExportBuildingConfig output.\n"
+            f"Raw output:\n{combined_out.strip()[:1000] or '(empty)'}"
+        )
 
     operation_name = match.group(1)
 
