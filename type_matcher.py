@@ -45,6 +45,11 @@ class MatchResult:
             return 100.0
         return self.required_matched / self.required_total * 100
 
+    @property
+    def unlinked(self) -> int:
+        """Fields present in the site model that are not defined in this type."""
+        return self.total_present - self.total_matched
+
 
 def load_type_map(yaml_path: Optional[str] = None) -> Dict:
     path = yaml_path or _TYPE_MAP_FILE
@@ -77,7 +82,7 @@ def rank_types(present: Set[str], category: str, type_map: Dict) -> List[MatchRe
         for type_name, type_def in (type_map.get(category) or {}).items()
         if type_def  # skip undefined (bare key) types
     ]
-    results.sort(key=lambda r: (r.required_pct, r.total_matched), reverse=True)
+    results.sort(key=lambda r: (r.required_pct, -r.unlinked, r.total_matched), reverse=True)
     return results
 
 
@@ -86,11 +91,10 @@ def display_match_table(ranked: List[MatchResult]) -> None:
         print("  No defined types found for this category.")
         return
     col = 38
-    print(f"\n  {'#':<4} {'Type':<{col}} {'Match%':>7}  Missing Required")
-    print("  " + "─" * (col + 28))
+    print(f"\n  {'#':<4} {'Type':<{col}} {'Match%':>7}  {'Unlinked':>8}  {'Miss Req':>8}")
+    print("  " + "─" * (col + 36))
     for i, r in enumerate(ranked, 1):
-        missing = ", ".join(r.missing_required) if r.missing_required else "—"
-        print(f"  {i:<4} {r.type_name:<{col}} {r.required_pct:>6.0f}%  {missing}")
+        print(f"  {i:<4} {r.type_name:<{col}} {r.required_pct:>6.0f}%  {r.unlinked:>8}  {len(r.missing_required):>8}")
     print()
 
 
@@ -134,14 +138,24 @@ def run_type_matcher(
     print(f"  Selected: {selected.type_name}")
     pre_add: List[str] = []
 
+    # Compute field breakdowns relative to the selected type
+    type_def = (type_map.get(meter_type) or {}).get(selected.type_name) or {}
+    type_fields = set(type_def.keys())
+    matched_list  = sorted(f for f in present if f in type_fields)
+    unlinked_list = sorted(f for f in present if f not in type_fields)
+
+    print(f"  Matched:          {', '.join(matched_list) or '—'}")
+    print(f"  Unlinked:         {', '.join(unlinked_list) or '—'}")
+    print(f"  Missing required: {', '.join(selected.missing_required) or '—'}")
+
     if selected.required_pct == 100.0:
-        print(f"  (100% match — all required fields present)")
+        if selected.unlinked > 0:
+            print(f"  (100% required match — {selected.unlinked} site model field(s) not defined in this type)")
+        else:
+            print(f"  (100% match — all required fields present, none unlinked)")
     else:
-        print(f"  Missing required fields:")
-        for f in selected.missing_required:
-            print(f"    - {f}")
         while True:
-            ans = input("  Add these as MISSING placeholders in the YAML? (Enter=Yes, 2=No): ").strip()
+            ans = input("  Add missing required fields as MISSING placeholders? (Enter=Yes, 2=No): ").strip()
             if ans in ("", "2"):
                 break
             print("  Invalid input. Press Enter for Yes or 2 for No.")
