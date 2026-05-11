@@ -11,7 +11,7 @@ from site_model_editor import (
     add_missing_points,
     build_yaml_asset_name,
 )
-from type_matcher import run_type_matcher, get_type_name
+from type_matcher import run_type_matcher, get_type_name, get_type_fields
 from translation_builder_udmi import build_udmi_dict
 from export_building_config import export_building_config
 from building_config_updater import run_building_config_updater_from_data
@@ -186,6 +186,14 @@ def run_yaml_batch_builder() -> None:
 
         general_type = "METER"
         type_name = get_type_name(suggestion=suggested_type)
+
+        # Filter yaml_points to only fields defined on the selected type
+        allowed_fields = get_type_fields(type_name, meter_type)
+        if allowed_fields:
+            excluded = [k for k in yaml_points if k not in allowed_fields]
+            if excluded:
+                print(f"  Excluding {len(excluded)} point(s) not in {type_name}: {', '.join(excluded)}")
+            yaml_points = {k: v for k, v in yaml_points.items() if k in allowed_fields}
 
         # Build DataFrame and handle missing fields
         missing_fields = add_missing_points(asset_name, pre_add=pre_add_fields)

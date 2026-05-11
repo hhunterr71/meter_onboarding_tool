@@ -77,7 +77,7 @@ def rank_types(present: Set[str], category: str, type_map: Dict) -> List[MatchRe
         for type_name, type_def in (type_map.get(category) or {}).items()
         if type_def  # skip undefined (bare key) types
     ]
-    results.sort(key=lambda r: (r.match_pct, r.required_pct), reverse=True)
+    results.sort(key=lambda r: (r.required_pct, r.total_matched), reverse=True)
     return results
 
 
@@ -86,11 +86,11 @@ def display_match_table(ranked: List[MatchResult]) -> None:
         print("  No defined types found for this category.")
         return
     col = 38
-    print(f"\n  {'#':<4} {'Type':<{col}} {'Match%':>7}  {'Req%':>5}  Missing Required")
-    print("  " + "─" * (col + 32))
+    print(f"\n  {'#':<4} {'Type':<{col}} {'Match%':>7}  Missing Required")
+    print("  " + "─" * (col + 28))
     for i, r in enumerate(ranked, 1):
         missing = ", ".join(r.missing_required) if r.missing_required else "—"
-        print(f"  {i:<4} {r.type_name:<{col}} {r.match_pct:>6.0f}%  {r.required_pct:>4.0f}%  {missing}")
+        print(f"  {i:<4} {r.type_name:<{col}} {r.required_pct:>6.0f}%  {missing}")
     print()
 
 
@@ -135,7 +135,7 @@ def run_type_matcher(
     pre_add: List[str] = []
 
     if selected.required_pct == 100.0:
-        print(f"  ({selected.match_pct:.0f}% overall, all required fields present)")
+        print(f"  (100% match — all required fields present)")
     else:
         print(f"  Missing required fields:")
         for f in selected.missing_required:
@@ -151,3 +151,13 @@ def run_type_matcher(
 
     print()
     return selected.type_name, pre_add
+
+
+def get_type_fields(type_name: str, meter_type: str, yaml_path: Optional[str] = None) -> set:
+    """Return all field names (required + optional) defined for a canonical type."""
+    try:
+        type_map = load_type_map(yaml_path)
+    except FileNotFoundError:
+        return set()
+    type_def = (type_map.get(meter_type) or {}).get(type_name) or {}
+    return set(type_def.keys())
