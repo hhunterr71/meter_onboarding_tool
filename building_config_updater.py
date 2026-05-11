@@ -97,6 +97,7 @@ def _process_meter(
         # --- ADD: meter not yet in building config ---
         meter_entry = {"operation": "ADD"}
         meter_entry.update(meter_data)
+        meter_entry.pop("update_mask", None)  # update_mask is only valid for UPDATE operations
 
         output = {
             "CONFIG_METADATA": {"operation": "UPDATE"},
