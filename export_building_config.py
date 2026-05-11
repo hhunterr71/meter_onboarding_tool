@@ -128,6 +128,28 @@ def _collect_building_codes_from_dir(project_dir: str) -> list:
     return sorted(codes)
 
 
+def run_export_single() -> None:
+    """One-off: export the building config for a single building code."""
+    while True:
+        building_code = input("Enter building code (US-XXX-YYY): ").strip().strip('"').strip("'")
+        if building_code:
+            break
+        print("Building code is required.")
+
+    while True:
+        out_dir = input("Enter output directory: ").strip().strip('"').strip("'")
+        if out_dir:
+            break
+        print("Output directory is required.")
+
+    outfile = os.path.join(out_dir, f"{building_code}_full_building_config.yaml")
+    try:
+        export_building_config(building_code, outfile)
+        print(f"Saved: {outfile}")
+    except RuntimeError as e:
+        print(f"Export failed: {e}")
+
+
 def run_export_batch() -> str | None:
     """Option 5: export building configs for one or more buildings."""
     raw = input(

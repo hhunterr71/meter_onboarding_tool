@@ -3,6 +3,7 @@ import site_model_editor
 import building_batch
 import yaml_batch_builder
 import onboard_config_updates
+import export_building_config
 
 def show_menu() -> str:
     print("\n=== Meter Onboard Tool ===")
@@ -11,18 +12,20 @@ def show_menu() -> str:
     print("     Build a UDMI translation for a single meter from a BACnet discovery JSON")
     print("  2. Single File Site Model Editor")
     print("     Normalize point names and fix units in a single metadata.json")
+    print("  3. Export Building Config")
+    print("     Download the full building config YAML for a single building code")
     print("\n-- batch tools --")
-    print("  3. Batch Site Model Editor")
+    print("  4. Batch Site Model Editor")
     print("     Normalize point names and fix units for all devices in a full site model")
-    print("  4. Batch UDMI + Config Pipeline")
+    print("  5. Batch UDMI + Config Pipeline")
     print("     Export building config, build meter data, and produce ADD/UPDATE files in one pass")
-    print("  5. Onboard Updated Configs")
+    print("  6. Onboard Updated Configs")
     print("     Submit ADD/UPDATE YAML files via stubby commands")
     while True:
-        choice = input("\nSelect an option (1-5): ").strip()
-        if choice in ("1", "2", "3", "4", "5"):
+        choice = input("\nSelect an option (1-6): ").strip()
+        if choice in ("1", "2", "3", "4", "5", "6"):
             return choice
-        print("Invalid selection. Please enter 1-5.")
+        print("Invalid selection. Please enter 1-6.")
 
 def run_loop() -> None:
     while True:
@@ -32,10 +35,12 @@ def run_loop() -> None:
         elif choice == "2":
             site_model_editor.run_site_model_editor()
         elif choice == "3":
-            building_batch.run_building_batch()
+            export_building_config.run_export_single()
         elif choice == "4":
-            yaml_batch_builder.run_yaml_batch_builder()
+            building_batch.run_building_batch()
         elif choice == "5":
+            yaml_batch_builder.run_yaml_batch_builder()
+        elif choice == "6":
             onboard_config_updates.run_onboard_updates()
 
         again = input("\nRun again? (y/n): ").strip().lower()
