@@ -187,13 +187,15 @@ def run_yaml_batch_builder() -> None:
         general_type = "METER"
         type_name = get_type_name(suggestion=suggested_type)
 
-        # Filter yaml_points to only fields defined on the selected type
+        # Warn about fields in the site model not defined in the selected type
         allowed_fields = get_type_fields(type_name, meter_type)
         if allowed_fields:
-            excluded = [k for k in yaml_points if k not in allowed_fields]
-            if excluded:
-                print(f"  Excluding {len(excluded)} point(s) not in {type_name}: {', '.join(excluded)}")
-            yaml_points = {k: v for k, v in yaml_points.items() if k in allowed_fields}
+            unrecognized = [k for k in yaml_points if k not in allowed_fields]
+            if unrecognized:
+                print(f"  Warning: {len(unrecognized)} field(s) not defined in {type_name}:")
+                for f in unrecognized:
+                    print(f"    {f}")
+                print("  These will be included in the output. Consider adding them to the type definition or marking IGNORE in the field map.")
 
         # Build DataFrame and handle missing fields
         missing_fields = add_missing_points(asset_name, pre_add=pre_add_fields)
