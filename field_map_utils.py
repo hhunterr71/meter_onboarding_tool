@@ -9,35 +9,6 @@ import yaml
 # Config
 # ---------------------------------------------------------------------------
 
-_config: Optional[Dict[str, Any]] = None
-
-
-def load_config(config_file: str = "config.yaml") -> Dict[str, Any]:
-    """Load configuration from YAML file (cached after first load)."""
-    global _config
-    if _config is not None:
-        return _config
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(base_dir, config_file)
-    _defaults: Dict[str, Any] = {
-        "defaults": {
-            "general_type": "METER",
-            "field_map_file": "mappings/standard_field_map.yaml",
-            "unit_map_file": "raw_units.yaml",
-        }
-    }
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            _config = yaml.safe_load(f)
-        return _config
-    except FileNotFoundError:
-        _config = _defaults
-        return _config
-    except Exception:
-        _config = _defaults
-        return _config
-
-
 # ---------------------------------------------------------------------------
 # Field map loading
 # ---------------------------------------------------------------------------

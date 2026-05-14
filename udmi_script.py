@@ -6,7 +6,6 @@ from typing import Dict, Any, Tuple, List, Optional
 import pandas as pd
 
 from field_map_utils import (
-    load_config,
     load_field_dbo_units,
     load_field_standard_units,
     resolve_unmatched,
@@ -164,8 +163,7 @@ def run_udmi() -> None:
 
     num_id = str(parsed.get("device_num_id", ""))
 
-    cfg = load_config()
-    yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), cfg["defaults"]["field_map_file"])
+    yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mappings", "standard_field_map.yaml")
     all_to_skip: set = set()
 
     # 3. Field mapping review loop

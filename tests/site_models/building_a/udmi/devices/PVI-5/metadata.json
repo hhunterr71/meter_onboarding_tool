@@ -2,8 +2,7 @@
   "timestamp": "2026-02-13T15:38:34Z",
   "version": "1.5.3",
   "cloud": {
-    "resource_type": "PROXIED",
-    "num_id": 253839025000235
+    "resource_type": "PROXIED"
   },
   "system": {
     "location": {
@@ -14,10 +13,10 @@
       "make": "",
       "model": ""
     },
-    "software": { },
+    "software": {},
     "min_loglevel": 300,
-    "name": "PV_Meter",
-    "description": "PV_Meter",
+    "name": "SUB_Meter",
+    "description": "SUB_Meter",
     "device_version": "1.5.3",
     "node_type": "field_device",
     "tags": [
@@ -27,7 +26,6 @@
     ],
     "physical_tag": {
       "asset": {
-        "guid": "uuid://42e27103-8143-4656-b65b-dbbd1d716287",
         "site": "US-MTV-1667",
         "name": "PVI-5"
       }
@@ -41,8 +39,8 @@
   },
   "discovery": {
     "families": {
-      "vendor": { },
-      "iot": { }
+      "vendor": {},
+      "iot": {}
     }
   },
   "localnet": {
@@ -67,7 +65,7 @@
       },
       "invalid": {
         "target_point": "Volts_CN",
-        "target_value": [ ]
+        "target_value": []
       },
       "scan_family": {
         "target_value": "vendor"
@@ -85,107 +83,112 @@
       "volts_cn": {
         "units": "V",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Volts_CN"
+        "ref": "DP_Comm2_SUB_Meter_Volts_CN"
       },
       "volts_bn": {
         "units": "V",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Volts_BN"
+        "ref": "DP_Comm2_SUB_Meter_Volts_BN"
       },
       "volts_an": {
         "units": "V",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Volts_AN"
+        "ref": "DP_Comm2_SUB_Meter_Volts_AN"
       },
       "kw_b": {
         "units": "kW",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_KW_B"
+        "ref": "DP_Comm2_SUB_Meter_KW_B"
       },
       "kw": {
         "units": "kW",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_kW"
+        "ref": "DP_Comm2_SUB_Meter_kW"
+      },
+      "kVAR": {
+        "units": "kVA",
+        "writable": false,
+        "ref": "DP_Comm2_SUB_Meter_kVAR"
       },
       "kw_a": {
         "units": "kW",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_KW_A"
+        "ref": "DP_Comm2_SUB_Meter_KW_A"
       },
       "volts_ll": {
         "units": "V",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Volts_LL"
+        "ref": "DP_Comm2_SUB_Meter_Volts_LL"
       },
       "volts_ab": {
         "units": "V",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Volts_AB"
+        "ref": "DP_Comm2_SUB_Meter_Volts_AB"
       },
       "volts_bc": {
         "units": "V",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Volts_BC"
+        "ref": "DP_Comm2_SUB_Meter_Volts_BC"
       },
       "volts_ln": {
         "units": "V",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Volts_LN"
+        "ref": "DP_Comm2_SUB_Meter_Volts_LN"
       },
       "kw_c": {
         "units": "kW",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_KW_C"
+        "ref": "DP_Comm2_SUB_Meter_KW_C"
       },
       "volts_ca": {
         "units": "V",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Volts_CA"
+        "ref": "DP_Comm2_SUB_Meter_Volts_CA"
       },
       "current_b": {
         "units": "A",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Current_B"
+        "ref": "DP_Comm2_SUB_Meter_Current_B"
       },
       "freq": {
         "units": "no_units",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Freq"
+        "ref": "DP_Comm2_SUB_Meter_Freq"
       },
       "current_c": {
         "units": "A",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Current_C"
+        "ref": "DP_Comm2_SUB_Meter_Current_C"
       },
       "pf_b": {
         "units": "no_units",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_PF_B"
+        "ref": "DP_Comm2_SUB_Meter_PF_B"
       },
       "pf_a": {
         "units": "no_units",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_PF_A"
+        "ref": "DP_Comm2_SUB_Meter_PF_A"
       },
       "kwh": {
         "units": "kWh",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_kWh"
+        "ref": "DP_Comm2_SUB_Meter_kWh"
       },
       "current": {
         "units": "A",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Current"
+        "ref": "DP_Comm2_SUB_Meter_Current"
       },
       "current_a": {
         "units": "A",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_Current_A"
+        "ref": "DP_Comm2_SUB_Meter_Current_A"
       },
       "pf_c": {
         "units": "no_units",
         "writable": false,
-        "ref": "DP_Comm2_PV_Meter_PF_C"
+        "ref": "DP_Comm2_SUB_Meter_PF_C"
       }
     }
   }

@@ -1,7 +1,6 @@
 import udmi_script
 import site_model_editor
 import building_batch
-import yaml_batch_builder
 import onboard_config_updates
 import export_building_config
 
@@ -39,7 +38,7 @@ def run_loop() -> None:
         elif choice == "4":
             building_batch.run_building_batch()
         elif choice == "5":
-            yaml_batch_builder.run_yaml_batch_builder()
+            building_batch.run_export_batch()
         elif choice == "6":
             onboard_config_updates.run_onboard_updates()
 

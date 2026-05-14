@@ -44,24 +44,5 @@ class TestFieldMapUtils(unittest.TestCase):
         with self.assertRaises(ValueError):
             field_map_utils.load_field_mapping("INVALID_TYPE", "test_field_map.yaml")
 
-    @patch('field_map_utils.yaml.safe_load')
-    @patch('builtins.open', new_callable=mock_open)
-    def test_load_config_success(self, mock_file, mock_yaml):
-        mock_yaml.return_value = {
-            "defaults": {"general_type": "METER"},
-        }
-        field_map_utils._config = None
-        result = field_map_utils.load_config()
-        self.assertIsInstance(result, dict)
-        self.assertIn("defaults", result)
-
-    @patch('builtins.open', side_effect=FileNotFoundError)
-    def test_load_config_file_not_found(self, mock_file):
-        field_map_utils._config = None
-        result = field_map_utils.load_config()
-        self.assertIsInstance(result, dict)
-        self.assertIn("defaults", result)
-
-
 if __name__ == '__main__':
     unittest.main(verbosity=2)

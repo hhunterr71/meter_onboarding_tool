@@ -163,18 +163,19 @@ def save_updated_json(
         print(f"Failed to save file: {e}")
 
 
-def _strip_network_prefix(device_str: str) -> Optional[str]:
+def _strip_and_deduplicate(device_str: str) -> Optional[str]:
     """
-    Strip leading BACnet network path segments from a device_str to isolate the device name.
+    Strip BACnet network prefix from device_str, then deduplicate if the device
+    name was embedded twice (Accuvim / PV-Inverter style).
 
-    Strips up to two leading segments:
+    Strips up to two leading underscore-segments:
       1. Network type code: 2-5 uppercase letters  (e.g. DP, UC, IP)
       2. Channel identifier (optional): uppercase-start word ending in digits (e.g. Comm2, Ch1)
 
-    Examples:
-      'DP_Comm2_PV_Meter'  -> 'PV_Meter'
-      'DP_Comm2_VAV-1'     -> 'VAV-1'
-      'DP_Comm2_MAIN_Meter'-> 'MAIN_Meter'
+    Then collapses repeated halves:
+      DP_Comm2_MAIN_Meter              -> MAIN_Meter   (standard)
+      DP_Accuvim_Meter_Site_Accuvim_Meter_Site  -> Accuvim_Meter_Site  (doubled)
+      DP_PV_Inverter-01_PV_Inverter-01 -> PV_Inverter-01  (doubled, hyphens)
     """
     parts = device_str.split("_")
     i = 0
@@ -182,45 +183,128 @@ def _strip_network_prefix(device_str: str) -> Optional[str]:
         i += 1
         if i < len(parts) - 1 and re.match(r'^[A-Z][A-Za-z]*\d+$', parts[i]):
             i += 1
-    result = "_".join(parts[i:])
+
+    remaining_parts = parts[i:]
+    if not remaining_parts:
+        return None
+
+    # Collapse repeated halves (DeviceName_DeviceName → DeviceName)
+    n = len(remaining_parts)
+    if n >= 2 and n % 2 == 0:
+        half = n // 2
+        first_half = "_".join(remaining_parts[:half])
+        second_half = "_".join(remaining_parts[half:])
+        if first_half.lower() == second_half.lower():
+            return first_half
+
+    result = "_".join(remaining_parts)
     return result if result else None
+
+
+# Matches the standard BACnet network/channel prefix, e.g. "DP_Comm2_" or "UC_Comm0_"
+_NET_PREFIX_RE = re.compile(r'^[A-Z]{2,5}_Comm\d+_', re.IGNORECASE)
+
+
+def _build_raw_lookup(meter_type: str):
+    """
+    Return (non_ignore_suffixes, ignore_key_set) built from the field map.
+
+    non_ignore_suffixes: list of lowercased raw names sorted longest-first,
+                         used to match point suffixes in refs.
+    ignore_key_set:      set of lowercased raw names that map to IGNORE,
+                         used to skip irrelevant points.
+    """
+    try:
+        field_map = load_field_mapping(meter_type)
+    except Exception:
+        return [], set()
+
+    non_ignore: set = set()
+    ignore_set: set = set()
+    for raw_name, standard_name in field_map.items():
+        if standard_name == "IGNORE":
+            ignore_set.add(raw_name.lower())
+        else:
+            non_ignore.add(raw_name.lower())
+
+    return sorted(non_ignore, key=len, reverse=True), ignore_set
 
 
 def extract_asset_name_from_refs(points: Dict[str, Any], meter_type: str) -> Optional[str]:
     """
-    For each point, strip trailing field-name segments from the ref, then:
-      Pass 1: look for a '{meter_type}-' anchor (e.g. 'EM-') to extract the device name.
-      Pass 2: if no anchor is found, vote on the most common stripped device_str and
-              strip the BACnet network path prefix to isolate the device name.
-    Returns the most-voted candidate, or None if no refs are present.
+    Extract meter device name by matching known field-map raw names against ref suffixes.
+
+    Strategy:
+      1. Skip IGNORE points (ping, Data_Stale, etc.) — their refs have a different
+         structure that would produce bogus device-name candidates.
+      2. Try every known non-IGNORE raw name (longest first) as a '_suffix' at the
+         end of the FULL ref string.  The part before the suffix is the device_str;
+         apply _strip_and_deduplicate() to get the device name.  This handles both
+         standard refs (DP_CommN_Device_Field) and non-Comm refs where the device
+         name is embedded twice (DP_Device_Device_Field).
+      3. Vote across all points; return the plurality winner.
+      4. Fallback: for refs that carry a standard CommN prefix but whose suffix isn't
+         in the field map (e.g. GasFlowTotal, kW_01), collect all post-prefix remainders
+         and return their longest common underscore-segment prefix as the device name.
+         This correctly handles numbered sub-points (kW_01..42, kWh_01..42 → IDF1_2Raw01)
+         as well as single-point devices where the full remainder IS the device name.
     """
-    search_prefix = f"{meter_type}-"
+    raw_suffixes, ignore_keys = _build_raw_lookup(meter_type)
+
     candidates: Dict[str, int] = {}
-    raw_device_strs: Dict[str, int] = {}
+    fallback_remainders: List[str] = []
 
     for point_key, point_data in points.items():
+        # 1. Skip IGNORE points
+        if point_key.lower() in ignore_keys:
+            continue
+
         ref = point_data.get("ref", "")
         if not ref:
             continue
-        num_segments = point_key.count("_") + 1
-        ref_parts = ref.split("_")
-        if len(ref_parts) <= num_segments:
-            continue
-        device_str = "_".join(ref_parts[:-num_segments])
-        raw_device_strs[device_str] = raw_device_strs.get(device_str, 0) + 1
-        idx = device_str.find(search_prefix)
-        if idx != -1:
-            name = device_str[idx:]
-            candidates[name] = candidates.get(name, 0) + 1
 
+        ref_lower = ref.lower()
+
+        # 2. Match a known raw suffix against the full ref
+        matched = False
+        for raw in raw_suffixes:
+            suffix = "_" + raw
+            if ref_lower.endswith(suffix):
+                device_str = ref[: len(ref) - len(suffix)]
+                device_name = _strip_and_deduplicate(device_str)
+                if device_name:
+                    candidates[device_name] = candidates.get(device_name, 0) + 1
+                matched = True
+                break
+
+        # 4. Collect post-prefix remainders for unrecognised suffixes
+        if not matched:
+            m = _NET_PREFIX_RE.match(ref)
+            if m:
+                fallback_remainders.append(ref[m.end():])
+
+    # 3. Return plurality winner from primary candidates
     if candidates:
         return max(candidates, key=lambda k: candidates[k])
 
-    if not raw_device_strs:
+    if not fallback_remainders:
         return None
 
-    best = max(raw_device_strs, key=lambda k: raw_device_strs[k])
-    return _strip_network_prefix(best)
+    # Longest common underscore-segment prefix across all fallback remainders
+    parts_list = [r.split("_") for r in fallback_remainders]
+    min_segs = min(len(p) for p in parts_list)
+    common_len = 0
+    for i in range(min_segs):
+        seg = parts_list[0][i].lower()
+        if all(p[i].lower() == seg for p in parts_list):
+            common_len = i + 1
+        else:
+            break
+
+    if common_len == 0:
+        return None
+
+    return "_".join(parts_list[0][:common_len])
 
 
 def build_yaml_asset_name(raw_name: str, meter_type: str) -> str:

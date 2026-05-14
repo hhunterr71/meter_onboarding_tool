@@ -1,0 +1,71 @@
+CONFIG_METADATA:
+  operation: EXPORT
+ 
+7677399d-7dd1-4465-bca2-cc4ed02efb5b:
+  code: building_a
+  etag: 5cbc9d0e
+  type: FACILITIES/BUILDING
+ 
+42e27103-8143-4656-b65b-dbbd1d716287:
+  cloud_device_id: '123456'
+  code: power-meter-PV_Meter
+  connections:
+    7677399d-7dd1-4465-bca2-cc4ed02efb5b:
+    - CONTAINS
+  etag: 1234as
+  translation:
+    phase2_line_current_sensor:
+      present_value: points.phase2_line_current_sensor.present_value
+      units:
+        key: pointset.points.phase2_line_current_sensor.unit
+        values:
+          amperes: amperes
+  type: METERS/EM_PWM_AVCM_PLPM_PVCM
+
+e5972723-2b5f-4819-a500-bad2bcece745:
+  cloud_device_id: '678910'
+  code: power-meter-MAIN_Meter
+  connections:
+    7677399d-7dd1-4465-bca2-cc4ed02efb5b:
+    - CONTAINS
+  etag: 5678as
+  translation:
+    phase2_line_current_sensor:
+      present_value: points.phase2_line_current_sensor.present_value
+      units:
+        key: pointset.points.phase2_line_current_sensor.unit
+        values:
+          amperes: amperes
+  type: METERS/EM_PWM_AVCM_PLPM_PVCM
+
+aaaa5555-bbbb-cccc-dddd-eeeeeeeeeeee:
+  cloud_device_id: '6666999'
+  code: power-meter-SUB_Meter
+  connections:
+    7677399d-7dd1-4465-bca2-cc4ed02efb5b:
+    - CONTAINS
+  etag: 8901as
+  translation:
+    phase2_line_current_sensor:
+      present_value: points.phase2_line_current_sensor.present_value
+      units:
+        key: pointset.points.phase2_line_current_sensor.unit
+        values:
+          amperes: amperes
+  type: METERS/EM_PWM_AVCM_PLPM_PVCM
+
+11112222-3333-4444-5555-666677778888:
+  cloud_device_id: '222222'
+  code: power-meter-GRID_Meter
+  connections:
+    7677399d-7dd1-4465-bca2-cc4ed02efb5b:
+    - CONTAINS
+  etag: 1234bs
+  translation:
+    phase2_line_current_sensor:
+      present_value: points.phase2_line_current_sensor.present_value
+      units:
+        key: pointset.points.phase2_line_current_sensor.unit
+        values:
+          amperes: amperes
+  type: METERS/EM_PWM_AVCM_PLPM_PVCM

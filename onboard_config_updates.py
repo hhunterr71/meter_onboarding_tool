@@ -3,10 +3,144 @@ import re
 import os
 import time
 
+import yaml
+
+from export_building_config import export_building_config
+
 
 # ----------------------------
 # Helper functions
 # ----------------------------
+
+def _write_yaml_sections(path: str, doc: dict) -> None:
+    """Write a flat dict to file as separate YAML sections, one per top-level key."""
+    parts = [yaml.dump({k: v}, sort_keys=False, default_flow_style=False) for k, v in doc.items()]
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(parts))
+
+
+def _reconcile_with_fresh_bc(updates_dir: str) -> None:
+    """Pull fresh BC for each building, detect partial onboarding, reconcile files in-place.
+
+    For _add.yaml files whose meter GUID now appears in the live BC (ADD succeeded):
+        - Convert to _update.yaml: set operation=UPDATE, add connections+etag from BC.
+    For _update.yaml files with a stale meter etag:
+        - Refresh the meter and building etags from the live BC.
+    Notifies the user of any changes and prompts Enter before continuing.
+    """
+    yaml_files = sorted([
+        f for f in os.listdir(updates_dir)
+        if (f.endswith("_add.yaml") or f.endswith("_update.yaml"))
+        and os.path.isfile(os.path.join(updates_dir, f))
+    ])
+    if not yaml_files:
+        return
+
+    # Collect all building codes from filenames
+    building_codes = set()
+    for f in yaml_files:
+        m = re.match(r"^(US-[A-Z]+-[A-Z0-9]+)_", f)
+        if m:
+            building_codes.add(m.group(1))
+    if not building_codes:
+        print("  Could not determine building code from filenames — skipping BC check.")
+        return
+
+    # Pull fresh BC for each building code (usually just one per folder)
+    fresh_bc_by_code: dict = {}
+    for bc_code in building_codes:
+        fresh_path = os.path.join(updates_dir, f"_fresh_bc_{bc_code}.yaml")
+        try:
+            export_building_config(bc_code, fresh_path)
+            with open(fresh_path, encoding="utf-8") as fh:
+                bc = yaml.safe_load(fh)
+            if isinstance(bc, dict):
+                fresh_bc_by_code[bc_code] = bc
+        except Exception as e:
+            print(f"  Could not pull fresh BC for {bc_code}: {e}")
+        finally:
+            if os.path.exists(fresh_path):
+                os.remove(fresh_path)
+
+    if not fresh_bc_by_code:
+        return
+
+    changes = []
+
+    for filename in yaml_files:
+        path = os.path.join(updates_dir, filename)
+        m = re.match(r"^(US-[A-Z]+-[A-Z0-9]+)_", filename)
+        if not m:
+            continue
+        fresh_bc = fresh_bc_by_code.get(m.group(1))
+        if not fresh_bc:
+            continue
+
+        try:
+            with open(path, encoding="utf-8") as fh:
+                doc = yaml.safe_load(fh)
+        except Exception:
+            continue
+        if not isinstance(doc, dict):
+            continue
+
+        # Identify building entry and meter entry within the YAML doc
+        building_entry_in_file = None
+        meter_guid, meter_entry = None, None
+        for k, v in doc.items():
+            if k == "CONFIG_METADATA" or not isinstance(v, dict):
+                continue
+            if v.get("type") == "FACILITIES/BUILDING":
+                building_entry_in_file = v
+            else:
+                meter_guid, meter_entry = k, v
+
+        if not meter_guid or not meter_entry:
+            continue
+
+        # Find corresponding entries in the fresh BC
+        fresh_building_data = next(
+            (v for k, v in fresh_bc.items()
+             if k != "CONFIG_METADATA" and isinstance(v, dict)
+             and v.get("type") == "FACILITIES/BUILDING"),
+            {}
+        )
+        fresh_meter_data = fresh_bc.get(meter_guid)
+
+        if filename.endswith("_add.yaml") and fresh_meter_data:
+            # ADD succeeded — meter now exists in BC; convert file to UPDATE
+            meter_entry["operation"] = "UPDATE"
+            meter_entry["connections"] = fresh_meter_data.get("connections", {})
+            meter_entry["etag"] = fresh_meter_data.get("etag", "")
+            meter_entry.setdefault("update_mask", ["type", "translation"])
+            if building_entry_in_file and fresh_building_data:
+                building_entry_in_file["etag"] = fresh_building_data.get(
+                    "etag", building_entry_in_file.get("etag", "")
+                )
+            new_filename = filename.replace("_add.yaml", "_update.yaml")
+            _write_yaml_sections(os.path.join(updates_dir, new_filename), doc)
+            os.remove(path)
+            changes.append(f"  {filename} → {new_filename}  (ADD applied, converted to UPDATE)")
+
+        elif filename.endswith("_update.yaml") and fresh_meter_data:
+            fresh_etag = fresh_meter_data.get("etag", "")
+            file_etag = meter_entry.get("etag", "")
+            if fresh_etag and fresh_etag != file_etag:
+                meter_entry["etag"] = fresh_etag
+                if building_entry_in_file and fresh_building_data:
+                    building_entry_in_file["etag"] = fresh_building_data.get(
+                        "etag", building_entry_in_file.get("etag", "")
+                    )
+                _write_yaml_sections(path, doc)
+                changes.append(f"  {filename}: etag refreshed ({file_etag!r} → {fresh_etag!r})")
+
+    if changes:
+        print("\nBC changes detected — config files updated:")
+        for c in changes:
+            print(c)
+        input("\nPress Enter to continue with onboarding... ")
+
+
 def run_onboard_and_get_status(building_code, topology_file_path, result_file_path):
     try:
         _, city_code, building_code_part = building_code.split("-", 2)
@@ -168,6 +302,8 @@ def run_onboard_updates(input_dir: str | None = None) -> None:
         print(f"building_config_updates/ subfolder not found in: {input_dir}")
         print("Run option 5 first to generate update files.")
         return
+
+    _reconcile_with_fresh_bc(updates_dir)
 
     update_files = sorted([
         f for f in os.listdir(updates_dir)
