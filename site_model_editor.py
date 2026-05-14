@@ -172,10 +172,19 @@ def _strip_and_deduplicate(device_str: str) -> Optional[str]:
       1. Network type code: 2-5 uppercase letters  (e.g. DP, UC, IP)
       2. Channel identifier (optional): uppercase-start word ending in digits (e.g. Comm2, Ch1)
 
+    Then strips an optional Modbus device-address block (keeps type-instance as part of name):
+      3. Literal "dev" keyword
+      4. Numeric device address (e.g. 100)
+
+    The type-instance tag (e.g. EM-1, WM-2) is intentionally kept — it disambiguates
+    multiple meters on the same bus and is meaningful in the BC device code.
+
     Then collapses repeated halves:
-      DP_Comm2_MAIN_Meter              -> MAIN_Meter   (standard)
-      DP_Accuvim_Meter_Site_Accuvim_Meter_Site  -> Accuvim_Meter_Site  (doubled)
-      DP_PV_Inverter-01_PV_Inverter-01 -> PV_Inverter-01  (doubled, hyphens)
+      DP_Comm2_MAIN_Meter                                        -> MAIN_Meter
+      DP_Comm0_dev_100_EM-1_Main-L1-PGE  (CampusTotal_Volts_AN stripped as suffix)
+                                                                 -> EM-1_Main-L1-PGE
+      DP_Accuvim_Meter_Site_Accuvim_Meter_Site                   -> Accuvim_Meter_Site  (doubled)
+      DP_PV_Inverter-01_PV_Inverter-01                           -> PV_Inverter-01  (doubled, hyphens)
     """
     parts = device_str.split("_")
     i = 0
@@ -183,6 +192,13 @@ def _strip_and_deduplicate(device_str: str) -> Optional[str]:
         i += 1
         if i < len(parts) - 1 and re.match(r'^[A-Z][A-Za-z]*\d+$', parts[i]):
             i += 1
+
+    # Strip optional Modbus device-address keyword + numeric address (e.g. dev_100)
+    # The type-instance that follows (e.g. EM-1) is part of the meter name — do not strip it
+    if i < len(parts) - 1 and parts[i].lower() == "dev":
+        i += 1  # skip "dev"
+        if i < len(parts) - 1 and re.match(r'^\d+$', parts[i]):
+            i += 1  # skip numeric address (e.g. "100")
 
     remaining_parts = parts[i:]
     if not remaining_parts:

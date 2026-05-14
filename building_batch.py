@@ -376,7 +376,12 @@ def _get_guid_status(
 
 
 def _get_points_status(devices_dir: str, folder: str) -> str:
-    """Return [GOOD], [FAIL], or '' based on whether all point names are DBO standard fields."""
+    """Return [GOOD], [FAIL], or '' based on whether Option 4 has been run.
+
+    [GOOD] if every point key is either a DBO standard field name or an IGNORE entry in
+    the field map (ignored points keep their raw names in the file after Option 4).
+    [FAIL] if any point key is unrecognized — Option 4 still needs to run.
+    """
     meter_type = _infer_meter_type(folder)
     if not meter_type:
         return ""
@@ -391,7 +396,10 @@ def _get_points_status(devices_dir: str, folder: str) -> str:
         non_dbo = [k for k in points if k not in field_standard_units]
         if not non_dbo:
             return "[GOOD]"
-        return "[FAIL]"
+        # Non-DBO points are acceptable if they are IGNORE entries in the field map
+        ci_field_map = build_case_insensitive_field_map(meter_type)
+        truly_unmatched = [k for k in non_dbo if ci_field_map.get(k.lower()) != "IGNORE"]
+        return "[GOOD]" if not truly_unmatched else "[FAIL]"
     except Exception:
         return "[?]"
 
@@ -935,6 +943,17 @@ def run_export_batch() -> None:
         if export_st == "":
             print(f"  Skipping {folder} — no discovery data.")
             continue
+
+        # Confirm or override the inferred meter name before writing YAML
+        print(f"  Name: {dbo_name or '(could not infer)'}")
+        name_input = input("  Confirm name (Enter) or type override: ").strip()
+        if name_input:
+            dbo_name = name_input
+            guid_st = _get_guid_status(devices_dir, folder, dbo_name, discovery, building_config)
+            export_st = _get_export_status(num_st, guid_st, pts_st)
+            if export_st in ("[BLOCKED]", ""):
+                print(f"  Blocked after name change (guid: {guid_st}). Skipping.")
+                continue
 
         skip_prompt = input("Skip or export this meter? (Enter=Export, 2=Skip): ").strip()
         if skip_prompt == "2":
