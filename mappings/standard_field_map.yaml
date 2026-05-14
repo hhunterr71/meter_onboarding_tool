@@ -208,6 +208,10 @@ EM:
     - inverter_efficiency
     - dc_current_4
     - dc_current_5
+    - kw_max
+    - kw_min
+    - kw_avg
+
 
 WM:
   flowrate_sensor:
@@ -233,25 +237,34 @@ WM:
     - Flow_Temperature
     - SignalStrength
     - Run_Hours
+    - time_units
+    - volume_units
+    - sensorstatus
+    - avgflowrate24hr
+    - flowtemperature
+
 
 GM:
   gas_flow_sensor:
     dbo_unit: cubic_feet_per_hour
     standard_unit: cubic-feet-per-hour
     names:
-    - GasFlow
+    - GasFlowRate_Unscaled
   gas_temperature_sensor:
     dbo_unit: degrees_fahrenheit
     standard_unit: degrees-farenheit
     names:
-    - GasPressure
+    - Temperature
   gas_volume_accumulator:
     dbo_unit: cubic_feet
     standard_unit: cubic-feet
     names:
-    - GasVolume
+    - GasFlowTotal_Unscaled
   IGNORE:
     dbo_unit: null
     standard_unit: null
     names:
     - Ping
+    - Gas_Flow_Total
+    - GasFlowRate
+    - gas_flowrate_sensor_scaled
