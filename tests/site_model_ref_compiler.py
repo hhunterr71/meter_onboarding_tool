@@ -1,7 +1,7 @@
 import os
 import json
-import csv
 import yaml
+import pandas as pd
 
 METER_PREFIXES = ("EM-", "GM-", "WM-", "PVI-", "EMV-")
 
@@ -56,7 +56,7 @@ def get_meter_type(device):
 
 
 site_models_dir = input("Enter path to site models directory: ").strip()
-output_csv = "pointset_refs.csv"
+output_xlsx = "pointset_refs.xlsx"
 
 all_mappings = load_yaml_map()
 
@@ -113,17 +113,26 @@ for building in sorted(os.listdir(site_models_dir)):
             rows.append({
                 "building": building,
                 "device": device,
+                "meter_type": meter_type or "",
                 "point": point_name,
                 "dbo_point": dbo_point,
                 "ref": ref,
                 "flag": flag,
             })
 
-with open(output_csv, "w", newline="") as f:
-    writer = csv.DictWriter(
-        f, fieldnames=["building", "device", "point", "dbo_point", "ref", "flag"]
-    )
-    writer.writeheader()
-    writer.writerows(rows)
+df_all = pd.DataFrame(rows, columns=["building", "device", "meter_type", "point", "dbo_point", "ref", "flag"])
 
-print(f"\nWrote {len(rows)} rows to {output_csv}")
+df_unmatched = (
+    df_all[df_all["flag"] == "not in standard field map"][["meter_type", "point"]]
+    .drop_duplicates()
+    .sort_values(["meter_type", "point"])
+    .reset_index(drop=True)
+)
+
+with pd.ExcelWriter(output_xlsx, engine="openpyxl") as writer:
+    df_all.to_excel(writer, sheet_name="All Points", index=False)
+    df_unmatched.to_excel(writer, sheet_name="Not In Field Map", index=False)
+
+print(f"\nWrote {len(rows)} rows to {output_xlsx}")
+print(f"  Sheet 'All Points':       {len(df_all)} rows")
+print(f"  Sheet 'Not In Field Map': {len(df_unmatched)} distinct unmatched point names")
