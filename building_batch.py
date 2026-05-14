@@ -76,7 +76,11 @@ def save_site_models_dir(path: str) -> None:
 
 
 def _load_discovery_lookup(work_dir: str) -> Dict[str, int]:
-    """Return {device_id: device_num_id} from device_discovery.json, or {} on error."""
+    """Return {device_id: device_num_id} from device_discovery.json, or {} on error.
+
+    When multiple rows share the same device_id, the row with the most recent
+    last_event_time is used. Null timestamps (None or the string "null") rank lowest.
+    """
     path = os.path.join(work_dir, "device_discovery.json")
     try:
         with open(path, encoding="utf-8") as f:
@@ -84,11 +88,20 @@ def _load_discovery_lookup(work_dir: str) -> Dict[str, int]:
         headers = data[0]
         id_idx = headers.index("device_id")
         num_id_idx = headers.index("device_num_id")
-        return {
-            row[id_idx]: int(row[num_id_idx])
-            for row in data[1:]
-            if len(row) > num_id_idx and row[num_id_idx] is not None
-        }
+        time_idx = headers.index("last_event_time")
+
+        best: Dict[str, tuple] = {}  # device_id -> (row, normalized_time_str)
+        for row in data[1:]:
+            if len(row) <= num_id_idx or row[num_id_idx] is None:
+                continue
+            device_id = row[id_idx]
+            t = row[time_idx] if len(row) > time_idx else None
+            if t is None or t == "null":
+                t = ""
+            if device_id not in best or t > best[device_id][1]:
+                best[device_id] = (row, t)
+
+        return {did: int(entry[0][num_id_idx]) for did, entry in best.items()}
     except Exception:
         return {}
 
@@ -320,9 +333,9 @@ def _get_num_id_status(devices_dir: str, folder: str, discovery: Dict[str, int])
             meta = json.load(f)
         meta_num = meta.get("cloud", {}).get("num_id")
         if meta_num is None:
-            return f"[MISSING \u2192 {disc_num}]"
+            return f"[ADD {disc_num} to SM]"
         if int(meta_num) != disc_num:
-            return f"[MISMATCH meta={meta_num} disc={disc_num}]"
+            return f"[MISMATCH SM={meta_num} BC={disc_num}]"
         return f"[OK {disc_num}]"
     except Exception:
         return "[?]"
