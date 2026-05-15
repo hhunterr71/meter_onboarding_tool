@@ -5,6 +5,21 @@ EM:
     names:
     - kVA
     - kV·A
+  phase1_apparent_power_sensor:
+    dbo_unit: kilovolt_amperes
+    standard_unit: kilo-volt-amperes
+    names:
+    - kva_a
+  phase2_apparent_power_sensor:
+    dbo_unit: kilovolt_amperes
+    standard_unit: kilo-volt-amperes
+    names:
+    - kva_b
+  phase3_apparent_power_sensor:
+    dbo_unit: kilovolt_amperes
+    standard_unit: kilo-volt-amperes
+    names:
+    - kva_c
   average_inter_line_voltage_sensor:
     dbo_unit: volts
     standard_unit: volts
@@ -26,11 +41,13 @@ EM:
     names:
     - kWh
     - kV·h
+    - realenergytotal
   exported_energy_accumulator:
     dbo_unit: kilowatt_hours
     standard_unit: kilowatt-hours
     names:
     - kWh_rec
+    - kwhrec
   line_frequency_sensor:
     dbo_unit: hertz
     standard_unit: hertz
@@ -44,18 +61,21 @@ EM:
     names:
     - Current_A
     - Phase_Line_Current_I1
+    - amps_a
   phase2_line_current_sensor:
     dbo_unit: amperes
     standard_unit: amperes
     names:
     - Current_B
     - Phase_Line_Current_I2
+    - amps_b
   phase3_line_current_sensor:
     dbo_unit: amperes
     standard_unit: amperes
     names:
     - Current_C
     - Phase_Line_Current_I3
+    - amps_c
   phase1_neutral_line_voltage_sensor:
     dbo_unit: volts
     standard_unit: volts
@@ -138,6 +158,21 @@ EM:
     standard_unit: kilo-volt-amperes-reactive
     names:
     - kVAR
+  phase1_reactive_power_sensor:
+    dbo_unit: kilovolt_amperes_reactive
+    standard_unit: kilo-volt-amperes-reactive
+    names:
+    - kvar_a
+  phase2_reactive_power_sensor:
+    dbo_unit: kilovolt_amperes_reactive
+    standard_unit: kilo-volt-amperes-reactive
+    names:
+    - kvar_b
+  phase3_reactive_power_sensor:
+    dbo_unit: kilovolt_amperes_reactive
+    standard_unit: kilo-volt-amperes-reactive
+    names:
+    - kvar_c
   IGNORE:
     dbo_unit: null
     standard_unit: null
@@ -211,6 +246,162 @@ EM:
     - kw_max
     - kw_min
     - kw_avg
+    - actwh
+    - dca1
+    - dca2
+    - dca3
+    - dca4
+    - dca5
+    - dca6
+    - dcv1
+    - dcv2
+    - dcv3
+    - dcv4
+    - dcv5
+    - dcv6
+    - dcw1
+    - dcw2
+    - dcw3
+    - dcw4
+    - dcw5
+    - dcw6
+    - tmpcab
+    - vref
+    - r4_kwh
+    - r3_kwh
+    - r2_kwh
+    - r1_kwh
+    - realenergytotal
+    - cummlativedemand
+    - did
+    - dc_input_vdc
+    - kwh_low
+    - amps_n
+    - amps_string_10
+    - amps_string_12
+    - amps_string_11
+    - dc_input_amps
+    - amps_string_1
+    - amps_string_3
+    - amps_string_2
+    - amps_string_5
+    - amps_string_4
+    - amps_string_7
+    - amps_string_6
+    - amps_string_9
+    - amps_string_8
+    - kwh_high
+    - stop_code
+    - event_1_vendor
+    - solectria_pf-fault
+    - dc_voltage_in-01
+    - dc_voltage_in-02
+    - dc_voltage_in-03
+    - dc_current_in-03
+    - dc_current_in-02
+    - dc_current_in-01
+    - solectria__fault-0
+    - DAILY_ENERGY
+    - Days_AC_Max_Active_Power
+    - Days_Runtime
+    - Mode
+    - Reserved_Null1
+    - Time_reg1
+    - Time_reg2
+    - Time_reg3
+    - Time_reg4
+    - dc_input_kw
+    - kw_peak
+    - pqm_sagswell
+    - Total_Energy
+    - AC_Active_Power
+    - AC_Apparent_Power
+    - kw_01
+    - kw_02
+    - kw_03
+    - kw_04
+    - kw_05
+    - kw_06
+    - kw_07
+    - kw_08
+    - kw_09
+    - kw_10
+    - kw_11
+    - kw_12
+    - kw_13
+    - kw_14
+    - kw_15
+    - kw_16
+    - kw_17
+    - kw_18
+    - kw_19
+    - kw_20
+    - kw_21
+    - kw_22
+    - kw_23
+    - kw_24
+    - kw_25
+    - kw_26
+    - kw_27
+    - kw_28
+    - kw_29
+    - kw_30
+    - kw_31
+    - kw_32
+    - kw_33
+    - kw_34
+    - kw_35
+    - kw_36
+    - kw_37
+    - kw_38
+    - kw_39
+    - kw_40
+    - kw_41
+    - kw_42
+    - kwh_01
+    - kwh_02
+    - kwh_03
+    - kwh_04
+    - kwh_05
+    - kwh_06
+    - kwh_07
+    - kwh_08
+    - kwh_09
+    - kwh_10
+    - kwh_11
+    - kwh_12
+    - kwh_13
+    - kwh_14
+    - kwh_15
+    - kwh_16
+    - kwh_17
+    - kwh_18
+    - kwh_19
+    - kwh_20
+    - kwh_21
+    - kwh_22
+    - kwh_23
+    - kwh_24
+    - kwh_25
+    - kwh_26
+    - kwh_27
+    - kwh_28
+    - kwh_29
+    - kwh_30
+    - kwh_31
+    - kwh_32
+    - kwh_33
+    - kwh_34
+    - kwh_35
+    - kwh_36
+    - kwh_37
+    - kwh_38
+    - kwh_39
+    - kwh_40
+    - kwh_41
+    - kwh_42
+
+
 
 
 WM:
@@ -245,11 +436,12 @@ WM:
 
 
 GM:
-  gas_flow_sensor:
+  gas_flowrate_sensor:
     dbo_unit: cubic_feet_per_hour
     standard_unit: cubic-feet-per-hour
     names:
     - GasFlowRate_Unscaled
+    - GasFlowRate
   gas_temperature_sensor:
     dbo_unit: degrees_fahrenheit
     standard_unit: degrees-farenheit
@@ -260,11 +452,12 @@ GM:
     standard_unit: cubic-feet
     names:
     - GasFlowTotal_Unscaled
+    - Gas_Flow_Total
+    - GasFlowTotal
   IGNORE:
     dbo_unit: null
     standard_unit: null
     names:
     - Ping
-    - Gas_Flow_Total
-    - GasFlowRate
     - gas_flowrate_sensor_scaled
+    - gas_volume_accumulator_scaled

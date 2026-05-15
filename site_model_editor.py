@@ -220,6 +220,39 @@ def _strip_and_deduplicate(device_str: str) -> Optional[str]:
 # Matches the standard BACnet network/channel prefix, e.g. "DP_Comm2_" or "UC_Comm0_"
 _NET_PREFIX_RE = re.compile(r'^[A-Z]{2,5}_Comm\d+_', re.IGNORECASE)
 
+# Broader prefix: matches any network code with optional Comm channel and
+# optional Modbus dev block, with or without a Comm# segment.
+# Used for the unmatched-suffix fallback to handle both Comm and non-Comm refs.
+_ANY_PREFIX_RE = re.compile(
+    r'^[A-Z]{2,5}_(?:[A-Z][A-Za-z]*\d+_)?(?:dev_\d+_)?',
+    re.IGNORECASE,
+)
+
+# Matches a PascalCase gateway/aggregator segment between the network prefix
+# and the meter name, e.g. "DataNab" in DP_Comm0_DataNab_{meter}.
+# Requires at least one lowercase then another uppercase — rules out plain
+# meter-name segments like MAIN, PV, or EM-1.
+_GATEWAY_SEGMENT_RE = re.compile(r'^[A-Z][a-z]+[A-Z][a-zA-Z0-9]*$')
+
+
+def _strip_prefix(device_str: str) -> Optional[str]:
+    """
+    Extended prefix stripper.  Calls _strip_and_deduplicate() then removes an
+    optional PascalCase gateway segment (e.g. DataNab) if one remains at front.
+
+    Handles DP_Comm0_DataNab_{meter_name}:
+      _strip_and_deduplicate  -> "DataNab_MAIN_Meter"
+      gateway strip           -> "MAIN_Meter"
+    """
+    result = _strip_and_deduplicate(device_str)
+    if result is None:
+        return None
+    parts = result.split("_")
+    if len(parts) > 1 and _GATEWAY_SEGMENT_RE.match(parts[0]):
+        remainder = "_".join(parts[1:])
+        return remainder if remainder else None
+    return result
+
 
 def _build_raw_lookup(meter_type: str):
     """
@@ -279,25 +312,33 @@ def extract_asset_name_from_refs(points: Dict[str, Any], meter_type: str) -> Opt
         if not ref:
             continue
 
-        ref_lower = ref.lower()
-
-        # 2. Match a known raw suffix against the full ref
+        # 2. Match a known raw suffix against the full ref.
+        #    Regex allows an optional trailing _\d+ so refs like _kW_01 match.
         matched = False
         for raw in raw_suffixes:
-            suffix = "_" + raw
-            if ref_lower.endswith(suffix):
-                device_str = ref[: len(ref) - len(suffix)]
-                device_name = _strip_and_deduplicate(device_str)
+            pattern = r"_" + re.escape(raw) + r"(_\d+)?$"
+            m = re.search(pattern, ref, re.IGNORECASE)
+            if m:
+                device_str = ref[: m.start()]
+                device_name = _strip_prefix(device_str)
                 if device_name:
                     candidates[device_name] = candidates.get(device_name, 0) + 1
                 matched = True
                 break
 
-        # 4. Collect post-prefix remainders for unrecognised suffixes
+        # 4. Collect post-prefix remainders for unrecognised suffixes.
+        #    Uses the broader _ANY_PREFIX_RE to handle both Comm and non-Comm
+        #    refs (e.g. DP_Comm2_... and DP_...).  Also strips a PascalCase
+        #    gateway segment (e.g. DataNab) from the remainder if present.
         if not matched:
-            m = _NET_PREFIX_RE.match(ref)
+            m = _ANY_PREFIX_RE.match(ref)
             if m:
-                fallback_remainders.append(ref[m.end():])
+                remainder = ref[m.end():]
+                seg, _, rest = remainder.partition("_")
+                if rest and _GATEWAY_SEGMENT_RE.match(seg):
+                    remainder = rest
+                if remainder:
+                    fallback_remainders.append(remainder)
 
     # 3. Return plurality winner from primary candidates
     if candidates:
@@ -321,6 +362,30 @@ def extract_asset_name_from_refs(points: Dict[str, Any], meter_type: str) -> Opt
         return None
 
     return "_".join(parts_list[0][:common_len])
+
+
+def extract_name_from_single_ref(ref: str, suffix_list: list) -> Optional[str]:
+    """
+    Extract meter name from a single ref string.  Handles:
+      DP_{meter}_{point}
+      DP_Comm#_{meter}_{point}
+      DP_Comm#_DataNab_{meter}_{point}  (PascalCase gateway segment)
+      ..._{point}_\\d+                   (trailing numeric index)
+      DP_Comm#_{meter}                   (no trailing point at all — fallback)
+    """
+    for raw in suffix_list:
+        pattern = r"_" + re.escape(raw) + r"(_\d+)?$"
+        m = re.search(pattern, ref, re.IGNORECASE)
+        if m:
+            device_str = ref[: m.start()]
+            return _strip_prefix(device_str)
+
+    # Fallback: no recognized suffix found.  If this looks like a valid BACnet
+    # ref (starts with 2-5 uppercase letters + underscore), strip the network
+    # prefix directly — the remainder is the meter name.
+    if re.match(r'^[A-Z]{2,5}_', ref):
+        return _strip_prefix(ref)
+    return None
 
 
 def build_yaml_asset_name(raw_name: str, meter_type: str) -> str:

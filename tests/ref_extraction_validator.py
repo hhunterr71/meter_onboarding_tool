@@ -23,7 +23,6 @@ Output: ref_extraction_results.xlsx (written next to the input file)
 """
 
 import os
-import re
 import sys
 from collections import defaultdict
 
@@ -35,7 +34,10 @@ import pandas as pd
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _ROOT)
 
-from site_model_editor import _strip_and_deduplicate, _build_raw_lookup  # noqa: E402
+from site_model_editor import (  # noqa: E402
+    _build_raw_lookup,
+    extract_name_from_single_ref,
+)
 from field_map_utils import _load_field_map_yaml                          # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -84,54 +86,6 @@ def _match_point(point_name: str, meter_type: str, lookups: dict):
         return name_to_standard[point_lower], ""
     return "", "not in standard field map"
 
-
-# ---------------------------------------------------------------------------
-# Extraction helpers (Pass 2)
-# ---------------------------------------------------------------------------
-
-# Matches a PascalCase gateway segment between the Comm channel and the meter
-# name, e.g. "DataNab" in DP_Comm0_DataNab_{meter}.
-# Requires at least one lowercase letter then another uppercase — rules out
-# plain segments like MAIN, PV, or EM-1.
-_GATEWAY_SEGMENT_RE = re.compile(r'^[A-Z][a-z]+[A-Z][a-zA-Z0-9]*$')
-
-
-def _strip_prefix(device_str: str):
-    """
-    Extended prefix stripper.  Calls _strip_and_deduplicate() then removes an
-    optional PascalCase gateway segment (e.g. DataNab) if one remains at front.
-    """
-    result = _strip_and_deduplicate(device_str)
-    if result is None:
-        return None
-    parts = result.split("_")
-    if len(parts) > 1 and _GATEWAY_SEGMENT_RE.match(parts[0]):
-        remainder = "_".join(parts[1:])
-        return remainder if remainder else None
-    return result
-
-
-def _get_suffix_list(meter_type: str):
-    """Return lowercased raw names sorted longest-first for suffix matching."""
-    raw_suffixes, _ = _build_raw_lookup(meter_type)
-    return raw_suffixes
-
-
-def extract_name_from_single_ref(ref: str, suffix_list) -> str | None:
-    """
-    Extract meter name from a single ref string.  Handles:
-      DP_{meter}_{point}
-      DP_Comm#_{meter}_{point}
-      DP_Comm#_DataNab_{meter}_{point}  (PascalCase gateway segment)
-      ..._{point}_\\d+                   (trailing numeric index)
-    """
-    for raw in suffix_list:
-        pattern = r"_" + re.escape(raw) + r"(_\d+)?$"
-        m = re.search(pattern, ref, re.IGNORECASE)
-        if m:
-            device_str = ref[: m.start()]
-            return _strip_prefix(device_str)
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +149,7 @@ def main():
     # ------------------------------------------------------------------
     # Pass 2: meter name extraction
     # ------------------------------------------------------------------
-    suffix_lists = {mt: _get_suffix_list(mt) for mt in df_matched["meter_type"].unique() if mt}
+    suffix_lists = {mt: _build_raw_lookup(mt)[0] for mt in df_matched["meter_type"].unique() if mt}
 
     extracted_names = []
     for _, row in df_matched.iterrows():
@@ -220,7 +174,10 @@ def main():
         key = (row["building"], row["device"])
         device_meta[key] = row["meter_type"]
         device_total[key] += 1
-        if row["extracted_name"]:
+        # Only vote using field-map-matched points.  Refs whose point name is
+        # not in the field map hit the extraction fallback and include the raw
+        # point suffix in the result, which would cause false INCONSISTENT.
+        if row["extracted_name"] and row["flag"] == "":
             device_vote[key][row["extracted_name"]] += 1
 
     per_device_rows = []
