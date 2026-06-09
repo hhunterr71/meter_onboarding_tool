@@ -307,6 +307,41 @@ EM:
     powerfactor_sensor: optional
     reactive_energy_accumulator: optional
     reactive_power_sensor: optional
+  EM_PWM_EPWM_PLPM_PVCM:
+    energy_accumulator: Required                    
+    phase1_phase2_line_voltage_sensor: Required                    
+    phase1_power_sensor: Required                    
+    phase2_line_current_sensor: Required                    
+    phase2_phase3_line_voltage_sensor: Required                    
+    power_sensor: Required                    
+    phase3_power_sensor: Required                    
+    phase1_line_current_sensor: Required                    
+    phase1_neutral_line_voltage_sensor: Required                    
+    phase3_line_current_sensor: Required                    
+    exported_energy_accumulator: Required                    
+    phase1_phase3_line_voltage_sensor: Required                    
+    line_frequency_sensor: Optional                    
+    phase2_neutral_line_voltage_sensor: Required                    
+    phase2_power_sensor: Required                    
+    phase3_neutral_line_voltage_sensor: Required                    
+    phase2_reactive_power_sensor: Optional                    
+    reactive_power_sensor: Optional                    
+    powerfactor_sensor: Optional                    
+    phase3_apparent_power_sensor: Optional                    
+    phase3_reactive_power_sensor: Optional                    
+    phase2_powerfactor_sensor: Optional                    
+    phase1_apparent_power_sensor: Optional                    
+    phase1_powerfactor_sensor: Optional                    
+    phase3_powerfactor_sensor: Optional                    
+    phase2_apparent_power_sensor: Optional                    
+    phase1_reactive_power_sensor: Optional                    
+    manufacturer_label: Optional                    
+    failed_communication_alarm: Optional                    
+    neutral_line_current_sensor: Optional                    
+    model_label: Optional                    
+    reactive_energy_accumulator: Optional                    
+    apparent_energy_accumulator: Optional                    
+    apparent_power_sensor: Optional
 
 WM:
   WM_STANDARD:
