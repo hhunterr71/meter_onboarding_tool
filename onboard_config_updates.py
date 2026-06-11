@@ -303,7 +303,11 @@ def run_onboard_updates(input_dir: str | None = None) -> None:
         print("Run option 5 first to generate update files.")
         return
 
-    _reconcile_with_fresh_bc(updates_dir)
+    reconcile = input(
+        "Fetch fresh building config to reconcile files? (Recommended) [Enter=Yes, n=No]: "
+    ).strip().lower()
+    if reconcile != "n":
+        _reconcile_with_fresh_bc(updates_dir)
 
     update_files = sorted([
         f for f in os.listdir(updates_dir)

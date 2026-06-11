@@ -1,3 +1,4 @@
+import csv
 import json
 import os
 import shutil
@@ -76,32 +77,33 @@ def save_site_models_dir(path: str) -> None:
 
 
 def _load_discovery_lookup(work_dir: str) -> Dict[str, int]:
-    """Return {device_id: device_num_id} from device_discovery.json, or {} on error.
+    """Return {device_id: device_num_id} from device_discovery.csv, or {} on error.
 
     When multiple rows share the same device_id, the row with the most recent
     last_event_time is used. Null timestamps (None or the string "null") rank lowest.
     """
-    path = os.path.join(work_dir, "device_discovery.json")
+    path = os.path.join(work_dir, "device_discovery.csv")
     try:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        headers = data[0]
-        id_idx = headers.index("device_id")
-        num_id_idx = headers.index("device_num_id")
-        time_idx = headers.index("last_event_time")
-
-        best: Dict[str, tuple] = {}  # device_id -> (row, normalized_time_str)
-        for row in data[1:]:
-            if len(row) <= num_id_idx or row[num_id_idx] is None:
-                continue
-            device_id = row[id_idx]
-            t = row[time_idx] if len(row) > time_idx else None
-            if t is None or t == "null":
-                t = ""
-            if device_id not in best or t > best[device_id][1]:
-                best[device_id] = (row, t)
-
-        return {did: int(entry[0][num_id_idx]) for did, entry in best.items()}
+        with open(path, encoding="utf-8", newline="") as f:
+            sample = f.read(4096)
+            f.seek(0)
+            try:
+                dialect = csv.Sniffer().sniff(sample, delimiters=",\t")
+            except csv.Error:
+                dialect = csv.excel_tab
+            reader = csv.DictReader(f, dialect=dialect)
+            best: Dict[str, tuple] = {}
+            for row in reader:
+                device_id = row.get("device_id")
+                num_id = row.get("device_num_id")
+                if not device_id or num_id is None:
+                    continue
+                t = row.get("last_event_time") or ""
+                if t == "null":
+                    t = ""
+                if device_id not in best or t > best[device_id][1]:
+                    best[device_id] = (row, t)
+        return {did: int(entry[0]["device_num_id"]) for did, entry in best.items()}
     except Exception:
         return {}
 
@@ -231,39 +233,38 @@ def _extract_building_code(devices_dir: str) -> Optional[str]:
 
 
 _DISCOVERY_HEADERS = ["device_registry_id", "device_id", "device_num_id", "last_event_time"]
+_DISCOVERY_SCRIPT_URL = (
+    "https://plx.corp.google.com/scripts2/script_5e._f704e7_7fe1_486b_8d3c_f3a20190d94e"
+)
 
 
-def _validate_discovery_json(path: str) -> tuple[bool, str]:
-    """Return (valid, error_message). Valid if parseable JSON array-of-arrays with correct headers."""
+def _validate_discovery_csv(path: str) -> tuple[bool, str]:
+    """Return (valid, error_message). Valid if parseable CSV/TSV with correct headers."""
     try:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        return False, f"Invalid JSON: {e}"
+        with open(path, encoding="utf-8", newline="") as f:
+            sample = f.read(4096)
+            f.seek(0)
+            try:
+                dialect = csv.Sniffer().sniff(sample, delimiters=",\t")
+            except csv.Error:
+                dialect = csv.excel_tab
+            reader = csv.DictReader(f, dialect=dialect)
+            headers = reader.fieldnames or []
     except Exception as e:
         return False, f"Could not read file: {e}"
-
-    if not isinstance(data, list) or len(data) < 2:
-        return False, "Expected a JSON array with at least 2 rows (header + data)."
-
-    headers = data[0]
-    if not isinstance(headers, list):
-        return False, "First row must be an array of column headers."
-
     missing = [h for h in _DISCOVERY_HEADERS if h not in headers]
     if missing:
         return False, f"Missing required headers: {missing}"
-
     return True, ""
 
 
-def _prompt_discovery_json(work_dir: str) -> None:
-    """Ensure device_discovery.json exists and is valid; prompt user to fill it if not."""
-    dest = os.path.join(work_dir, "device_discovery.json")
+def _prompt_discovery_csv(work_dir: str) -> None:
+    """Ensure device_discovery.csv exists and is valid; prompt user to fill it if not."""
+    dest = os.path.join(work_dir, "device_discovery.csv")
 
     # Already valid — nothing to do
     if os.path.isfile(dest) and os.path.getsize(dest) > 0:
-        valid, err = _validate_discovery_json(dest)
+        valid, err = _validate_discovery_csv(dest)
         if valid:
             print(f"Discovery file ready: {dest}")
             return
@@ -275,15 +276,16 @@ def _prompt_discovery_json(work_dir: str) -> None:
             f.write("")
         print(f"\nDevice discovery file created (empty):\n  {dest}")
 
-    print("Paste your device discovery JSON data into that file and save it.")
-    print(f"Expected headers: {_DISCOVERY_HEADERS}")
+    print("Run the discovery script and copy the CSV data into that file:")
+    print(f"  {_DISCOVERY_SCRIPT_URL}")
+    print(f"Expected columns: {_DISCOVERY_HEADERS}")
 
     while True:
         input("Press Enter to check...")
         if not (os.path.isfile(dest) and os.path.getsize(dest) > 0):
-            print("File is still empty. Add the JSON data and save, then press Enter.")
+            print("File is still empty. Paste the CSV data and save, then press Enter.")
             continue
-        valid, err = _validate_discovery_json(dest)
+        valid, err = _validate_discovery_csv(dest)
         if valid:
             print("Discovery data validated. Continuing.")
             break
@@ -608,15 +610,23 @@ def run_building_batch() -> None:
                 print(f"Using local building config (skipping export): {local_files[0]}")
             else:
                 outfile = os.path.join(work_dir, f"{building_code}_full_building_config.yaml")
-                try:
-                    export_building_config(building_code, outfile)
-                except Exception as e:
-                    print(f"Could not pull building config: {e}")
+                if os.path.isfile(outfile):
+                    print(f"  Existing building config found: {os.path.basename(outfile)}")
+                fetch = input(
+                    "  Fetch fresh building config? (Recommended) [Enter=Yes, n=No]: "
+                ).strip().lower()
+                if fetch != "n":
+                    try:
+                        export_building_config(building_code, outfile)
+                    except Exception as e:
+                        print(f"Could not pull building config: {e}")
+                else:
+                    print("  Skipping building config fetch — using existing file.")
         else:
             print("Could not determine building code from metadata — skipping config pull.")
 
         # Ensure discovery JSON is populated
-        _prompt_discovery_json(work_dir)
+        _prompt_discovery_csv(work_dir)
         discovery = _load_discovery_lookup(work_dir)
         building_config = _load_building_config(work_dir)
 
@@ -855,14 +865,22 @@ def run_export_batch() -> None:
                 print(f"Using local building config (skipping export): {local_files[0]}")
             else:
                 outfile = os.path.join(work_dir, f"{building_code}_full_building_config.yaml")
-                try:
-                    export_building_config(building_code, outfile)
-                except Exception as e:
-                    print(f"Could not pull building config: {e}")
+                if os.path.isfile(outfile):
+                    print(f"  Existing building config found: {os.path.basename(outfile)}")
+                fetch = input(
+                    "  Fetch fresh building config? (Recommended) [Enter=Yes, n=No]: "
+                ).strip().lower()
+                if fetch != "n":
+                    try:
+                        export_building_config(building_code, outfile)
+                    except Exception as e:
+                        print(f"Could not pull building config: {e}")
+                else:
+                    print("  Skipping building config fetch — using existing file.")
         else:
             print("Could not determine building code from metadata — skipping config pull.")
 
-        _prompt_discovery_json(work_dir)
+        _prompt_discovery_csv(work_dir)
         discovery = _load_discovery_lookup(work_dir)
         building_config = _load_building_config(work_dir)
     else:
